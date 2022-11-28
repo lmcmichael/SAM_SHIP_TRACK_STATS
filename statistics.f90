@@ -90,7 +90,7 @@ implicit none
 	real zero(nzm)
 
 	integer topind(nx,ny),z_inv_ind(nx,ny),z_base_ind(nx,ny),z_top_ind(nx,ny),ncloud	
-        real zzz,grad_max(nx,ny),grad,tmpqcl,tmpqci
+        real zzz,grad_max(nx,ny),grad,tmpqcl,tmpqci, qclz(nzm), qciz(nzm)
 
 !========================================================================
 ! UW ADDITIONS
@@ -735,7 +735,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
          !threshold (currently set at 3.0 std deviations)
          !in a grid column. Background aerosol standard deviation is the 
          !maximum of either the standard deviation in vertical columns 
-         !or the standard deviation in the horizontal.
+         !for the standard deviation in the horizontal.
          !mcmichael (7/2022)
          !----------------------------------------------------------------
          if(doShipTrackConditionals) then
@@ -903,44 +903,52 @@ real, dimension(nx,ny,nzm) :: Dryaero
                      condavg_mask(i,j,k,icondavg_env) = 1. ! cloud-free environment
                   end if
                   
-                  !conditional averages for ship track 
-                  !computed for mixed-layer model profiles
-                  !make entire column 1 if cloud is present
-                  tmpqcl = SUM(qcl(i,j,:))
-                  tmpqci = SUM(qci(i,j,:))
-                  condition_cloud = (tmpqcl + tmpqci).gt.coef
+		  !only loop through i,j indices for ship track stats
+		  if(k.eq.1) then
+		  
+                  	!conditional averages for ship track 
+                  	!computed for mixed-layer model profiles
+                  	!make entire column 1 if cloud is present
+			qclz(:) = qcl(i,j,:)
+			qciz(:) = qci(i,j,:)
+                  	tmpqcl = MAXVAL(qclz(:))
+                  	tmpqci = MAXVAL(qciz(:))
+			!if any liquid is present = .true.
+                  	condition_cloud = (tmpqcl + tmpqci).gt.0
                   
-                  !Calculate ship track condition                    
-                  if(day.lt.shipv2_time0) then
-                     condition_track = .false.
-                  else
-                     condition_track = aero_xy_col(i,j).gt.aero_thresh
-                  endif
+                  	!Calculate ship track condition                    
+                  	if(day.lt.shipv2_time0) then
+                     		condition_track = .false.
+                  	else
+                     		condition_track = aero_xy_col(i,j).gt.aero_thresh
+                  	endif
 
-                  !Print out aerosol threshold to log file
-                  if(masterproc.and.(i+j+k.eq.3)) then 
-                    print*, 'Aerosol threshold for ship track (#/mg) =', aero_thresh*1.e-6 
-                  endif
+                  	!Print out aerosol threshold to log file
+                  	if(masterproc.and.(i+j+k.eq.3)) then 
+                    		print*, 'Aerosol threshold for ship track (#/mg) =', aero_thresh*1.e-6 
+                  	endif
                   
-                  if((icondavg_sh_cloud.gt.0).AND. &
-                       (condition_cloud.AND.condition_track)) then
-                     condavg_mask(i,j,:,icondavg_sh_cloud) = 1. !ship and cloud
-                  end if
+                  	if((icondavg_sh_cloud.gt.0).AND. &
+                       		(condition_cloud.AND.condition_track)) then
+                     		condavg_mask(i,j,:,icondavg_sh_cloud) = 1. !ship and cloud
+                  	end if
                  
-                  if((icondavg_sh_clear.gt.0).AND.(.NOT.condition_cloud).AND. &
-                       (condition_track)) then
-                     condavg_mask(i,j,:,icondavg_sh_clear) = 1. !ship and clear
-                  end if
+                  	if((icondavg_sh_clear.gt.0).AND.(.NOT.condition_cloud).AND. &
+                       		(condition_track)) then
+                     		condavg_mask(i,j,:,icondavg_sh_clear) = 1. !ship and clear
+                  	end if
 
-                  if((icondavg_no_sh_cloud.gt.0).AND. &
-                       (condition_cloud).AND.(.NOT.condition_track)) then
-                     condavg_mask(i,j,:,icondavg_no_sh_cloud) = 1. !no ship and cloud
-                  end if                  
+                  	if((icondavg_no_sh_cloud.gt.0).AND. &
+                       		(condition_cloud).AND.(.NOT.condition_track)) then
+                     		condavg_mask(i,j,:,icondavg_no_sh_cloud) = 1. !no ship and cloud
+                  	end if                  
 
-                  if((icondavg_no_sh_clear.gt.0).AND. &
-                       (.NOT.condition_cloud).AND.(.NOT.condition_track)) then
-                     condavg_mask(i,j,:,icondavg_no_sh_clear) = 1. !no ship, no cloud
-                  end if
+                  	if((icondavg_no_sh_clear.gt.0).AND. &
+                       		(.NOT.condition_cloud).AND.(.NOT.condition_track)) then
+                     		condavg_mask(i,j,:,icondavg_no_sh_clear) = 1. !no ship, no cloud
+                  	end if
+			
+		  end if
 
                end do
             end do
