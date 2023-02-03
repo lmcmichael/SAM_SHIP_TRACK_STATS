@@ -5,6 +5,8 @@ Affected files:
 
 grid.f90
 vars.f90
+init.f90
+hbuffer.f90
 setparm.f90
 printout.f90
 hbuf_conditionals_init.f90
