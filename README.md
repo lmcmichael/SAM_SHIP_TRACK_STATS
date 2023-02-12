@@ -34,6 +34,8 @@ Mass, energy, and moisture budget variables/residuals
 ‘RDIV’ - The net radiative flux is calculated similarly to WLO/WLA by evaluating the flux at the inversion base height in each column and then averaged across all columns. The net radiative flux divergence is then calculated by taking the average radiative flux at the inversion base minus the surface radiative flux [W/m2]
 ‘LDIV’ - The long-wave component of the radiative flux divergence [W/m2].
 ‘SDIV’ - The short-wave component of the radiative flux divergence [W/m2].
+'TCB' - cloud-base temperature [K]
+'QT_A' - Mean boundary-layer total water mixing ratio 
 ‘TL_T’ - Boundary-layer average (weighted by density and grid spacing) liquid water static energy tendency [K/s]. 
 ‘SH_F’ - The surface sensible heat flux, normally output in the 2D stats [W/m2].
 ‘QT_T’ - Boundary-layer average (weighted by density and grid spacing) total water mixing ratio tendency [1/s].
