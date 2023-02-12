@@ -120,6 +120,10 @@ subroutine hbuf_conditionals_init(count,trcount)
           'Sfc. Precip. rate in '//TRIM(condavglongname(n)),'m/s',n)
      call add_to_namelist(count,trcount,'PR_Z'//TRIM(condavgname(n)), &
           'Inv. Base Precip. rate in '//TRIM(condavglongname(n)),'m/s',n)
+     call add_to_namelist(count,trcount,'QT_A'//TRIM(condavgname(n)), &
+          'QT BL-avg. in '//TRIM(condavglongname(n)),'kg/kg',n)
+     call add_to_namelist(count,trcount,'TCB'//TRIM(condavgname(n)), &
+          'Cloud-base temp. in '//TRIM(condavglongname(n)),'K',n)
      call add_to_namelist(count,trcount,'TL_T'//TRIM(condavgname(n)), &
           'TL BL-avg. tendency in '//TRIM(condavglongname(n)),'K/s',n)
      call add_to_namelist(count,trcount,'QT_T'//TRIM(condavgname(n)), &
