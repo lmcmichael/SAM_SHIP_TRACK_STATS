@@ -140,7 +140,7 @@ implicit none
  real, dimension(nx,ny) :: qt_w, tl_w !weighted BL column means
  real, dimension(nzm) :: z_grid, z_diff !correcting z grid
  real, dimension(nzm) :: wem !entrainment rate from mass budget
- real, dimension(nzm) :: zb, tmp_zb, tmp_sum, tmp_qt, tmp_tl !inversion base height
+ real, dimension(nzm) :: zb, tcb, tmp_zb, tmp_sum, tmp_qt, tmp_tl !inversion base height
  real, dimension(nzm) :: wlo !local vertical velocity
  real, dimension(nzm) :: wla !large-scale subsidence
  real, dimension(nzm) :: invt !inversion tendency term
@@ -1122,6 +1122,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
             tl_t(:) = 0.
             qt_t(:) = 0.
             tl_avg(:) = 0.
+	    tcb(:) = 0.
             qt_avg(:) = 0.
             cb_h_avg(:) = 0.
             cl_d_avg(:) = 0.
@@ -1234,6 +1235,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
                                         +w(i,j,height_inv(i,j)))*(qpl(i,j,height_inv(i,j)) &
                                         -qrz(height_inv(i,j))) !inv. top prec. flux
                               tl_avg(:) = tl_avg(:) + tl_w(i,j) !weighted tl average
+			      tcb(:) = tcb(:) + tabs(i,j,height_cb(i,j)) !cb temp
                               qt_avg(:) = qt_avg(:) + qt_w(i,j) !weighted qt average
                               cb_h_avg(:) = cb_h_avg(:) + z(height_cb(i,j)) 
                               cl_d_avg(:) = cl_d_avg(:) + z(height_ct(i,j)) - z(height_cb(i,j))
@@ -1442,6 +1444,8 @@ real, dimension(nx,ny,nzm) :: Dryaero
                 !update qt_old for next time step
                 qt_old(:,ncond) = tmp_qt(:)/(tmp_sum(:)+EPSILON(1.))
 
+                call hbuf_put('QT_A'//TRIM(condavgname(ncond)),qt_avg,1.)
+                call hbuf_put('TCB'//TRIM(condavgname(ncond)),tcb,1.)
                 call hbuf_put('TL_T'//TRIM(condavgname(ncond)),tl_t,1.)
                 call hbuf_put('QT_T'//TRIM(condavgname(ncond)),qt_t,1.)
                  
