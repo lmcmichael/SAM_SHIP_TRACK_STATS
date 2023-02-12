@@ -231,6 +231,9 @@ end if
         !aerosol threshold conditional stats (SH_CLOUD, SH_CLEAR, NO_SH_CLEAR,
         !NO_SH_CLOUD)
         if(doShipTrackConditionals) ncondavg = ncondavg + 4 
+	if(ncondavg.gt.10) then
+             print*, 'ERROR: Need to allocate more memory in vars.f90 (zb_old)'
+        endif
         if(allocated(condavg_factor)) then ! avoid double allocation when nrestart=2
           DEALLOCATE(condavg_factor,condavg_mask,condavgname,condavglongname)
         end if
