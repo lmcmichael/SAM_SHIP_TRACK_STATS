@@ -11,11 +11,11 @@ setparm.f90
 printout.f90
 hbuf_conditionals_init.f90
 restart.f90
-MICRO_M2005_PA/microphysics.f90
+MICRO_M2005_PA/microphysics.f90 
 RAD_RRTM4PBL/rad_full.f90
 statistics.f90
 
-Overview: Conditionally sample statistics based on deviations from background aerosol concentration before an aerosol injection. A ship track column is present if the weighted average of the bottom N height levels (N controlled by n_avg_lev, with a default value of the bottom 30 grid levels) exceeds the standard deviation threshold (default value: std_t = 3.0). The standard deviation (std_aero) is the maximum deviation in either the horizontal or vertical directions. At each time step, each model grid column is assigned one of the 4 conditions based on the average aerosol concentration through n_avg_lev and the presence or absence of liquid water (threshold is anything greater than 0 g/kg). 
+Overview: Conditionally sample statistics based on deviations from background aerosol concentration before an aerosol injection. A ship track column is present if the weighted average of the bottom N height levels (N controlled by n_avg_lev, with a default value of the bottom 30 grid levels) exceeds the standard deviation threshold (default value: std_t = 3.0). The standard deviation (std_aero) is the maximum deviation in either the horizontal or vertical directions. At each time step, each model grid column is assigned one of the 4 conditions based on the average aerosol concentration through n_avg_lev and the presence or absence of liquid water (threshold is anything greater than 0 g/kg). Current version will only work with RAD_RRTM4PBL and MICRO_M2005_PA, but this can be easily ported to other radiation/microphysics packages.
 
 List of unique statistics calculated when doShipTrackConditionals = .true.
 
