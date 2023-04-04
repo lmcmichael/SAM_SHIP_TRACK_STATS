@@ -122,18 +122,40 @@ subroutine hbuf_conditionals_init(count,trcount)
           'Inv. Base Precip. rate in '//TRIM(condavglongname(n)),'m/s',n)
      call add_to_namelist(count,trcount,'QT_A'//TRIM(condavgname(n)), &
           'QT BL-avg. in '//TRIM(condavglongname(n)),'kg/kg',n)
+     call add_to_namelist(count,trcount,'TL_A'//TRIM(condavgname(n)), &
+          'TL BL-avg. in '//TRIM(condavglongname(n)),'K',n)
+     call add_to_namelist(count,trcount,'LWP'//TRIM(condavgname(n)), &
+          'QT BL-avg. in '//TRIM(condavglongname(n)),'kg/m2',n)
      call add_to_namelist(count,trcount,'TCB'//TRIM(condavgname(n)), &
           'Cloud-base temp. in '//TRIM(condavglongname(n)),'K',n)
+     call add_to_namelist(count,trcount,'CBH'//TRIM(condavgname(n)), &
+          'Cloud-base height in '//TRIM(condavglongname(n)),'m',n)
+     call add_to_namelist(count,trcount,'TLCL'//TRIM(condavgname(n)), &
+          'TL cloud layer avg. in '//TRIM(condavglongname(n)),'K',n)
+     call add_to_namelist(count,trcount,'TLSC'//TRIM(condavgname(n)), &
+          'TL subcloud layer avg. in '//TRIM(condavglongname(n)),'K',n)
+     call add_to_namelist(count,trcount,'QTCL'//TRIM(condavgname(n)), &
+          'QT cloud layer avg. in '//TRIM(condavglongname(n)),'kg/kg',n)
+     call add_to_namelist(count,trcount,'QTSC'//TRIM(condavgname(n)), &
+          'QT subcloud layer avg. in '//TRIM(condavglongname(n)),'kg/kg',n)
      call add_to_namelist(count,trcount,'TL_T'//TRIM(condavgname(n)), &
           'TL BL-avg. tendency in '//TRIM(condavglongname(n)),'K/s',n)
      call add_to_namelist(count,trcount,'QT_T'//TRIM(condavgname(n)), &
           'QT BL-avg. tendency in '//TRIM(condavglongname(n)),'1/s',n)
-     call add_to_namelist(count,trcount,'CL_T'//TRIM(condavgname(n)), &
-          'Cloud Thick. tendency in '//TRIM(condavglongname(n)),'m/s',n)
+     call add_to_namelist(count,trcount,'TCLT'//TRIM(condavgname(n)), &
+          'TL cloud layer avg. tendency in '//TRIM(condavglongname(n)),'K/s',n)
+     call add_to_namelist(count,trcount,'QCLT'//TRIM(condavgname(n)), &
+          'QT cloud layer avg. tendency in '//TRIM(condavglongname(n)),'1/s',n)
+     call add_to_namelist(count,trcount,'TSCT'//TRIM(condavgname(n)), &
+          'TL subcloud layer avg. tendency in '//TRIM(condavglongname(n)),'K/s',n)
+     call add_to_namelist(count,trcount,'QSCT'//TRIM(condavgname(n)), &
+          'QT subcloud layer avg. tendency in '//TRIM(condavglongname(n)),'1/s',n)
+     !call add_to_namelist(count,trcount,'CL_T'//TRIM(condavgname(n)), &
+     !     'Cloud Thick. tendency in '//TRIM(condavglongname(n)),'m/s',n)
      call add_to_namelist(count,trcount,'CB_T'//TRIM(condavgname(n)), &
           'Cloud Base tendency in '//TRIM(condavglongname(n)),'m/s',n)
-     call add_to_namelist(count,trcount,'LWPT'//TRIM(condavgname(n)), &
-          'LWP tendency in '//TRIM(condavglongname(n)),'kg/kg/m2/s',n)
+     !call add_to_namelist(count,trcount,'LWPT'//TRIM(condavgname(n)), &
+     !     'LWP tendency in '//TRIM(condavglongname(n)),'kg/kg/m2/s',n)
      call add_to_namelist(count,trcount,'SW_U'//TRIM(condavgname(n)), &
           'Upwelling Shortwave in '//TRIM(condavglongname(n)),'W/m2',n)
      call add_to_namelist(count,trcount,'SW_D'//TRIM(condavgname(n)), &
