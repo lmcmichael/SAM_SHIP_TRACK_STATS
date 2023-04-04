@@ -124,11 +124,10 @@ implicit none
  !moved aero_col, std_aero, aero_thresh, stats_flag to vars.f90
  real :: std_t, tot_depth, aero_tot, aero_avg, &
          buffer2(nzm), buffer3(nzm), buffer4(2), buffer5(2), &
-         buffer6(1), buffer7(1), buffer8(nzm), buffer9(nzm), &
-         buffer10(nzm), buffer11(nzm), buffer12(nzm), buffer13(nzm), &
-         buffer14(nzm), buffer15(nzm), buffer16(nzm), buffer17(nzm), &
-         buffer18(nzm), buffer19(nzm), buffer20(nzm), buffer21(nzm), &
-         std_hor, std_vert, factor_nlev 
+         buffer6(1), buffer7(1), buffer8(2), buffer9(2), &
+         buffer10(3), buffer11(3), buffer12(3), buffer13(3), &
+         buffer14(1), buffer15(1), tmp_qt, tmp_qtcl, tmp_qtsc, tmp_tl, tmp_cb, &
+         tmp_tlcl, tmp_tlsc, std_hor, std_vert, factor_nlev, tmp_sum, tmp_zb 
  real, dimension(nx,ny) :: aero_xy, aero_xy_col, std_z_aero, aero_dev
  real, dimension(n_avg_lev) :: aero_xy1, aero_sq, aero_totz, aero_z_avg
 
@@ -137,10 +136,11 @@ implicit none
  real, dimension(nx,ny,nzm) :: T_diff !tabs grid for derivative
  real, dimension(nx,ny) :: height_inv !array of inversion base heights
  real, dimension(nx,ny) :: height_cb, height_ct, lwp, cl_depth, cb_h
+ real, dimension(nx,ny) :: tlcl, qtcl, tlsc, qtsc !cl, subcloud layer averages
  real, dimension(nx,ny) :: qt_w, tl_w !weighted BL column means
  real, dimension(nzm) :: z_grid, z_diff !correcting z grid
  real, dimension(nzm) :: wem !entrainment rate from mass budget
- real, dimension(nzm) :: zb, tcb, tmp_zb, tmp_sum, tmp_qt, tmp_tl !inversion base height
+ real, dimension(nzm) :: zb, tcb !inversion base height
  real, dimension(nzm) :: wlo !local vertical velocity
  real, dimension(nzm) :: wla !large-scale subsidence
  real, dimension(nzm) :: invt !inversion tendency term
@@ -148,11 +148,13 @@ implicit none
  real, dimension(nzm) :: rdiv, ldiv, sdiv !radiative divergence terms
  real, dimension(nzm) :: sh_f, lh_f !surface flux terms 
  real, dimension(nzm) :: pr_s, pr_z !surface and inversion top prec. flux
- real, dimension(nzm) :: tl_t, qt_t, tl_avg, qt_avg, cb_t, cl_t, lwpt !tendencies
- real, dimension(nzm) :: cb_h_avg, cl_d_avg, lwp_avg, tmp_cl, tmp_cb, tmp_lwp
+ real, dimension(nzm) :: tl_t, qt_t, tl_avg, qt_avg, cb_t, cl_t, lwpt, &
+                         tlcl_t, tlsc_t, qtcl_t, qtsc_t !tendency terms
+ real, dimension(nzm) :: cb_h_avg, cl_d_avg, lwp_avg, tmp_cl, tmp_lwp, &
+                         tlcl_avg, tlsc_avg, qtcl_avg, qtsc_avg
  real, parameter :: der_thresh = 0.03 !derivative threshold for dT/dz
  integer, parameter :: h_cb = 40 !starting index for k loop (~cloud-base)
- real :: der_temp, rho_tot 
+ real :: der_temp, rho_tot, rho_tot2, rho_tot3 
  !------------------------------------------------
 
  !bloss: momentum flux statistics for cloud, up/downdraft cores
@@ -918,6 +920,8 @@ real, dimension(nx,ny,nzm) :: Dryaero
          !calculate column-by-column weighted qt and tl for tendency comp.
          !weighted by grid spacing and density
 
+         qt_w(:,:) = 0.
+         tl_w(:,:) = 0.
          do i = 1,nx
                 do j = 1,ny
                        do k = 1,height_inv(i,j)
@@ -961,14 +965,42 @@ real, dimension(nx,ny,nzm) :: Dryaero
                 enddo jloop2
          enddo iloop2
 
-         !calulate liquid water path in each column
+         !calculate liquid water path in each column
+         !calculate cloud-layer average of q_t and t_l
+         lwp(:,:) = 0.
+         tlcl(:,:) = 0.
+         qtcl(:,:) = 0.
          do i = 1,nx
                 do j = 1,ny
                        do k = height_cb(i,j),height_ct(i,j)
+                          rho_tot2 = SUM(rho(height_cb(i,j):height_ct(i,j)))
                           lwp(i,j) = lwp(i,j) + rho(k)*qcl(i,j,k)*z_diff(k)
+                          tlcl(i,j) = tlcl(i,j) + t(i,j,k) &
+                                      *((z_diff(k)/(z(height_ct(i,j))-z(height_cb(i,j))) + &
+                                      (rho(k)/rho_tot2))/2.0)
+                          qtcl(i,j) = qtcl(i,j) + (qv(i,j,k)+qcl(i,j,k)+qci(i,j,k)) &
+                                      *((z_diff(k)/(z(height_ct(i,j))-z(height_cb(i,j))) + &
+                                      (rho(k)/rho_tot2))/2.0)
                        enddo
                 enddo
          enddo         
+
+         !calculate subcloud layer average of q_t and t_l
+         tlsc(:,:) = 0.
+         qtsc(:,:) = 0.
+         do i = 1,nx
+                do j = 1,ny
+                        do k = 1,height_cb(i,j)
+                           rho_tot3 = SUM(rho(1:height_cb(i,j)))
+                           tlsc(i,j) = tlsc(i,j) + t(i,j,k) &
+                                      *((z_diff(k)/(z(height_cb(i,j))) + &
+                                      (rho(k)/rho_tot3))/2.0)
+                           qtsc(i,j) = qtsc(i,j) + (qv(i,j,k)+qcl(i,j,k)+qci(i,j,k)) &
+                                      *((z_diff(k)/(z(height_cb(i,j))) + &
+                                      (rho(k)/rho_tot3))/2.0)
+                        enddo
+                enddo
+         enddo
 
          !------------------------------------------------------------------
 
@@ -1121,8 +1153,16 @@ real, dimension(nx,ny,nzm) :: Dryaero
             pr_z(:) = 0.
             tl_t(:) = 0.
             qt_t(:) = 0.
+            tlcl_t(:) = 0.
+            tlsc_t(:) = 0.
+            qtcl_t(:) = 0.
+            qtsc_t(:) = 0.
             tl_avg(:) = 0.
-	    tcb(:) = 0.
+            tlcl_avg(:) = 0.
+            qtcl_avg(:) = 0.
+            tlsc_avg(:) = 0.
+            qtsc_avg(:) = 0.
+            tcb(:) = 0.
             qt_avg(:) = 0.
             cb_h_avg(:) = 0.
             cl_d_avg(:) = 0.
@@ -1235,11 +1275,15 @@ real, dimension(nx,ny,nzm) :: Dryaero
                                         +w(i,j,height_inv(i,j)))*(qpl(i,j,height_inv(i,j)) &
                                         -qrz(height_inv(i,j))) !inv. top prec. flux
                               tl_avg(:) = tl_avg(:) + tl_w(i,j) !weighted tl average
-			      tcb(:) = tcb(:) + tabs(i,j,height_cb(i,j)) !cb temp
+                              tcb(:) = tcb(:) + tabs(i,j,height_cb(i,j)) !cb temp
                               qt_avg(:) = qt_avg(:) + qt_w(i,j) !weighted qt average
                               cb_h_avg(:) = cb_h_avg(:) + z(height_cb(i,j)) 
                               cl_d_avg(:) = cl_d_avg(:) + z(height_ct(i,j)) - z(height_cb(i,j))
                               lwp_avg(:) = lwp_avg(:) + lwp(i,j) 
+                              tlcl_avg(:) = tlcl_avg(:) + tlcl(i,j)
+                              tlsc_avg(:) = tlsc_avg(:) + tlsc(i,j)
+                              qtcl_avg(:) = qtcl_avg(:) + qtcl(i,j)
+                              qtsc_avg(:) = qtsc_avg(:) + qtsc(i,j)
                            endif     
 
                            sw_u(k) = sw_u(k) + swUp3D(i,j,k) !upwelling sw
@@ -1384,23 +1428,18 @@ real, dimension(nx,ny,nzm) :: Dryaero
                 invt(:) = ((zb(:) - condavg_factor(:,ncond)*zb_old(:,ncond))/dt/float(nstatis))
 
                 !sum zb across processors
-                tmp_zb(:) = zb(:)
+                tmp_zb = zb(1)
+                tmp_sum = condavg_factor(1,ncond)
                 if(dompi) then
-                   buffer10(:) = tmp_zb(:)
-                   call task_sum_real(buffer10(:),buffer11(:),nzm*ncondavg)
-                   tmp_zb(:) = buffer11(:)
+                   buffer8(1) = tmp_zb
+                   buffer8(2) = tmp_sum
+                   call task_sum_real(buffer8(:),buffer9(:),2)
+                   tmp_zb = buffer9(1)
+                   tmp_sum = buffer9(2)
                 endif
                 
-                !sum cond. avg. mask across processors
-                tmp_sum(:) = condavg_factor(:,ncond)
-                if(dompi) then
-                   buffer8(:) = tmp_sum(:)
-                   call task_sum_real(buffer8(:),buffer9(:),nzm*ncondavg)
-                   tmp_sum(:) = buffer9(:)
-                endif
-
                 !update zb_old for next time step
-                zb_old(:,ncond) = tmp_zb(:)/(tmp_sum(:)+EPSILON(1.))
+                zb_old(:,ncond) = tmp_zb/(tmp_sum+EPSILON(1.))
 
                 call hbuf_put('INVT'//TRIM(condavgname(ncond)),invt,1.)
 
@@ -1420,76 +1459,116 @@ real, dimension(nx,ny,nzm) :: Dryaero
 
                 !compute mean-BL tendencies of qt and tl
                 tl_t(:) = ((tl_avg(:) - condavg_factor(:,ncond)*tl_old(:,ncond))/dt/float(nstatis))
+                tlcl_t(:) = ((tlcl_avg(:) - condavg_factor(:,ncond)*tlcl_old(:,ncond))/dt/float(nstatis))
+                tlsc_t(:) = ((tlsc_avg(:) - condavg_factor(:,ncond)*tlsc_old(:,ncond))/dt/float(nstatis))
+
                 qt_t(:) = ((qt_avg(:) - condavg_factor(:,ncond)*qt_old(:,ncond))/dt/float(nstatis))
+                qtcl_t(:) = ((qtcl_avg(:) - condavg_factor(:,ncond)*qtcl_old(:,ncond))/dt/float(nstatis))
+                qtsc_t(:) = ((qtsc_avg(:) - condavg_factor(:,ncond)*qtsc_old(:,ncond))/dt/float(nstatis))
 
                 !sum tl avg. across processors
-                tmp_tl(:) = tl_avg(:)
+                tmp_tl = tl_avg(1)
+                tmp_tlcl = tlcl_avg(1)
+                tmp_tlsc = tlsc_avg(1)
                 if(dompi) then
-                   buffer12(:) = tmp_tl(:)
-                   call task_sum_real(buffer12(:),buffer13(:),nzm*ncondavg)
-                   tmp_tl(:) = buffer13(:)
+                   buffer10(1) = tmp_tl
+                   buffer10(2) = tmp_tlcl
+                   buffer10(3) = tmp_tlsc
+                   call task_sum_real(buffer10(:),buffer11(:),3)
+                   tmp_tl = buffer11(1)
+                   tmp_tlcl = buffer11(2)
+                   tmp_tlsc = buffer11(3)
                 endif
 
                 !sum qt avg. across processors
-                tmp_qt(:) = qt_avg(:)
+                tmp_qt = qt_avg(1)
+                tmp_qtcl = qtcl_avg(1)
+                tmp_qtsc = qtsc_avg(1)
                 if(dompi) then
-                   buffer14(:) = tmp_qt(:)
-                   call task_sum_real(buffer14(:),buffer15(:),nzm*ncondavg)
-                   tmp_qt(:) = buffer15(:)
+                   buffer12(1) = tmp_qt
+                   buffer12(2) = tmp_qtcl
+                   buffer12(3) = tmp_qtsc
+                   call task_sum_real(buffer12(:),buffer13(:),3)
+                   tmp_qt = buffer13(1)
+                   tmp_qtcl = buffer13(2)
+                   tmp_qtsc = buffer13(3)
                 endif
 
                 !update tl_old for next time step
-                tl_old(:,ncond) = tmp_tl(:)/(tmp_sum(:)+EPSILON(1.))
+                tl_old(:,ncond) = tmp_tl/(tmp_sum+EPSILON(1.))
+
+                !update tlcl_old for next time step
+                tlcl_old(:,ncond) = tmp_tlcl/(tmp_sum+EPSILON(1.))
+
+                !update tlsc_old for next time step
+                tlsc_old(:,ncond) = tmp_tlsc/(tmp_sum+EPSILON(1.))
 
                 !update qt_old for next time step
-                qt_old(:,ncond) = tmp_qt(:)/(tmp_sum(:)+EPSILON(1.))
+                qt_old(:,ncond) = tmp_qt/(tmp_sum+EPSILON(1.))
+
+                !update qtcl_old for next time step
+                qtcl_old(:,ncond) = tmp_qtcl/(tmp_sum+EPSILON(1.))
+
+                !update qtsc_old for next time step
+                qtsc_old(:,ncond) = tmp_qtsc/(tmp_sum+EPSILON(1.))
 
                 call hbuf_put('QT_A'//TRIM(condavgname(ncond)),qt_avg,1.)
+                call hbuf_put('TL_A'//TRIM(condavgname(ncond)),tl_avg,1.)
+                call hbuf_put('LWP'//TRIM(condavgname(ncond)),lwp_avg,1.)
                 call hbuf_put('TCB'//TRIM(condavgname(ncond)),tcb,1.)
+                call hbuf_put('CBH'//TRIM(condavgname(ncond)),cb_h_avg,1.)
+                call hbuf_put('TLCL'//TRIM(condavgname(ncond)),tlcl_avg,1.)
+                call hbuf_put('TLSC'//TRIM(condavgname(ncond)),tlsc_avg,1.)
+                call hbuf_put('QTCL'//TRIM(condavgname(ncond)),qtcl_avg,1.)
+                call hbuf_put('QTSC'//TRIM(condavgname(ncond)),qtsc_avg,1.)
                 call hbuf_put('TL_T'//TRIM(condavgname(ncond)),tl_t,1.)
                 call hbuf_put('QT_T'//TRIM(condavgname(ncond)),qt_t,1.)
-                 
+                call hbuf_put('TCLT'//TRIM(condavgname(ncond)),tlcl_t,1.)
+                call hbuf_put('QCLT'//TRIM(condavgname(ncond)),qtcl_t,1.)
+                call hbuf_put('TSCT'//TRIM(condavgname(ncond)),tlsc_t,1.)
+                call hbuf_put('QSCT'//TRIM(condavgname(ncond)),qtsc_t,1.) 
+
                 !compute cloud-base/thickness and liquid water path tendencies
-                cl_t(:) = ((cl_d_avg(:) - condavg_factor(:,ncond)*cl_old(:,ncond))/dt/float(nstatis))
+                !cl_t(:) = ((cl_d_avg(:) - condavg_factor(:,ncond)*cl_old(:,ncond))/dt/float(nstatis))
                 cb_t(:) = ((cb_h_avg(:) - condavg_factor(:,ncond)*cb_old(:,ncond))/dt/float(nstatis))
-                lwpt(:) = ((lwp_avg(:) - condavg_factor(:,ncond)*lwp_old(:,ncond))/dt/float(nstatis))
+                !lwpt(:) = ((lwp_avg(:) - condavg_factor(:,ncond)*lwp_old(:,ncond))/dt/float(nstatis))
 
                 !sum cloud thickness across processors
-                tmp_cl(:) = cl_d_avg(:)
-                if(dompi) then
-                   buffer16(:) = tmp_cl(:)
-                   call task_sum_real(buffer16(:),buffer17(:),nzm*ncondavg)
-                   tmp_cl(:) = buffer17(:)
-                endif
+                !tmp_cl(:) = cl_d_avg(:)
+                !if(dompi) then
+                !   buffer16(:) = tmp_cl(:)
+                !   call task_sum_real(buffer16(:),buffer17(:),nzm*ncondavg)
+                !   tmp_cl(:) = buffer17(:)
+                !endif
 
                 !sum cloud base across processors
-                tmp_cb(:) = cb_h_avg(:)
+                tmp_cb = cb_h_avg(1)
                 if(dompi) then
-                   buffer18(:) = tmp_cb(:)
-                   call task_sum_real(buffer18(:),buffer19(:),nzm*ncondavg)
-                   tmp_cb(:) = buffer19(:)
+                   buffer14(1) = tmp_cb
+                   call task_sum_real(buffer14,buffer15,1)
+                   tmp_cb = buffer15(1)
                 endif
 
                 !sum lwp across processors
-                tmp_lwp(:) = lwp_avg(:)
-                if(dompi) then
-                   buffer20(:) = tmp_lwp(:)
-                   call task_sum_real(buffer20(:),buffer21(:),nzm*ncondavg)
-                   tmp_lwp(:) = buffer21(:)
-                endif
+                !tmp_lwp(:) = lwp_avg(:)
+                !if(dompi) then
+                !   buffer20(:) = tmp_lwp(:)
+                !   call task_sum_real(buffer20(:),buffer21(:),nzm*ncondavg)
+                !   tmp_lwp(:) = buffer21(:)
+                !endif
 
                 !update tl_old for next time step
-                cl_old(:,ncond) = tmp_cl(:)/(tmp_sum(:)+EPSILON(1.))
+                !cl_old(:,ncond) = tmp_cl(:)/(tmp_sum(:)+EPSILON(1.))
 
                 !update qt_old for next time step
-                cb_old(:,ncond) = tmp_cb(:)/(tmp_sum(:)+EPSILON(1.))
+                cb_old(:,ncond) = tmp_cb/(tmp_sum+EPSILON(1.))
 
                 !update qt_old for next time step
-                lwp_old(:,ncond) = tmp_lwp(:)/(tmp_sum(:)+EPSILON(1.))
+                !lwp_old(:,ncond) = tmp_lwp(:)/(tmp_sum(:)+EPSILON(1.))
 
-                call hbuf_put('CL_T'//TRIM(condavgname(ncond)),cl_t,1.)
+                !call hbuf_put('CL_T'//TRIM(condavgname(ncond)),cl_t,1.)
                 call hbuf_put('CB_T'//TRIM(condavgname(ncond)),cb_t,1.)
-                call hbuf_put('LWPT'//TRIM(condavgname(ncond)),lwpt,1.)
+                !call hbuf_put('LWPT'//TRIM(condavgname(ncond)),lwpt,1.)
 
                 call hbuf_put('SW_U'//TRIM(condavgname(ncond)),sw_u,1.)
                 call hbuf_put('SW_D'//TRIM(condavgname(ncond)),sw_d,1.)
