@@ -20,6 +20,10 @@ subroutine init()
   cl_old = 0.
   cb_old = 0.
   lwp_old = 0.
+  tlcl_old = 0.
+  tlsc_old = 0.
+  qtcl_old = 0.
+  qtsc_old = 0.
 
   fzero = 0.
  
