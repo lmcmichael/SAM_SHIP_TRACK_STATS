@@ -5,6 +5,7 @@ Affected files:
 
 grid.f90
 vars.f90
+stat_2Dinit.f90
 init.f90
 hbuffer.f90
 setparm.f90
@@ -15,7 +16,7 @@ MICRO_M2005_PA/microphysics.f90
 RAD_RRTM4PBL/rad_full.f90
 statistics.f90
 
-Overview: Conditionally sample statistics based on deviations from background aerosol concentration before an aerosol injection. A ship track column is present if the weighted average of the bottom N height levels (N controlled by n_avg_lev, with a default value of the bottom 30 grid levels) exceeds the standard deviation threshold (default value: std_t = 3.0). The standard deviation (std_aero) is the maximum deviation in either the horizontal or vertical directions. At each time step, each model grid column is assigned one of the 4 conditions based on the average aerosol concentration through n_avg_lev and the presence or absence of liquid water (threshold is anything greater than 0 g/kg). Current version will only work with RAD_RRTM4PBL and MICRO_M2005_PA, but this can be easily ported to other radiation/microphysics packages.
+Overview: Conditionally sample statistics based on deviations from background aerosol concentration before an aerosol injection. A ship track column is present if the weighted average of the bottom N height levels (N controlled by n_avg_lev, with a default value of the bottom 30 grid levels) exceeds the standard deviation threshold (default value: std_t = 3.0). The standard deviation (std_aero) is the maximum deviation in either the horizontal or vertical directions. At each time step, each model grid column is assigned one of the 4 conditions based on the average aerosol concentration through n_avg_lev and the presence/absence of liquid water (threshold is anything greater than 0 g/kg). Current version will only work with RAD_RRTM4PBL and MICRO_M2005_PA, but this can be easily ported to other radiation/microphysics packages.
 
 List of unique statistics calculated when doShipTrackConditionals = .true.
 
@@ -44,7 +45,17 @@ Mass, energy, and moisture budget variables/residuals
 ‘PR_Z’ - Rain rate (precipitation flux) at the inversion base [m/s].
 ‘CL_T’ - Cloud-thickness tendency [m/s].
 ‘CB_T’ - Cloud-base tendency [m/s].
-‘LWPT’ - Liquid water path tendency [kg/kg/m2/s].
+'CBH' - Cloud-base height [m].
+'TCB' - Cloud-base temperature [K].
+'TLCL' - LWSE cloud-layer average [K].
+'TLSC' - LWSE subcloud-layer average [K].
+'QTCL' - Total water mixing ratio cloud-layer average [kg/kg].
+'QTSC' - Total water mixing ratio subcloud-layer average [kg/kg].
+'TCLT' - LWSE cloud-layer tendency [K/s].
+'TSCT' - LWSE subcloud-layer tendency [K/s].
+'QCLT' - Total water mixing ratio cloud-layer tendency [1/s].
+'QSCT' - Total water mixing ratio subcloud-layer tendency [1/s].
+‘LWP’ - Liquid water path [kg/m2].
 
 
 Vertical profiles of conditionally sampled regions (variables not included in original version of statistics.f90)
