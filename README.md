@@ -5,8 +5,6 @@ Affected files:
 
 grid.f90
 vars.f90
-stat_2Dinit.f90
-init.f90
 hbuffer.f90
 setparm.f90
 printout.f90
@@ -27,28 +25,29 @@ List of unique statistics calculated when doShipTrackConditionals = .true.
 
 Mass, energy, and moisture budget variables/residuals
 
-‘WEM’ - Entrainment rate calculated as a residual of the mass budget [m/s].
 ‘ZB’ - Inversion base height (boundary-layer depth) as calculated using an absolute temperature threshold of 0.03 K/m. Note that the threshold was determined using 5 m vertical grid spacing [m].
-‘INVT’ - Inversion base height tendency [m/s].
+‘ZBCT’ - Cloud top height (~boundary-layer depth) for cases when inversion base height may fail due to decoupling
 ‘WLO’ - Local mean vertical velocity in the sub-sampled region, calculated by averaging the vertical velocity at the inversion base height [m/s].
 ‘WLA’  - Large-scale vertical velocity across the entire domain (prescribed profile). Again, the average large-scale velocity in a sub-sampled region is found by averaging the inversion base height large-scale velocity value in each column [m/s].
+'WLOT' - Local vertical velocity at cloud top height
+'WLAT' - Large-scael vertical velocity at cloud top height
 ‘RDIV’ - The net radiative flux is calculated similarly to WLO/WLA by evaluating the flux at the inversion base height in each column and then averaged across all columns. The net radiative flux divergence is then calculated by taking the average radiative flux at the inversion base minus the surface radiative flux [W/m2]
 ‘LDIV’ - The long-wave component of the radiative flux divergence [W/m2].
 ‘SDIV’ - The short-wave component of the radiative flux divergence [W/m2].
-'TCB' - cloud-base temperature [K]
+'RDVT' - Net radiative flux divergence calcuated at cloud top height in each column
+'LDVT' - Same as LDIV, but evaluated at cloud top height instead of inversion base 
+'SDVT' - Same as SDIV, but evaluated at cloud top height instead of inversion base 
 'QT_A' - Mean boundary-layer total water mixing ratio 
-‘TL_T’ - Boundary-layer average (weighted by density and grid spacing) liquid water static energy tendency [K/s]. 
+'TL_A' - Mean boundary-layer liquid potential temperature 
 ‘SH_F’ - The surface sensible heat flux, normally output in the 2D stats [W/m2].
-‘QT_T’ - Boundary-layer average (weighted by density and grid spacing) total water mixing ratio tendency [1/s].
 ‘LH_F’ - Surface latent heat flux [W/m2].
 ‘PR_S’ - Surface rain rate [m/s].
 ‘PR_Z’ - Rain rate (precipitation flux) at the inversion base [m/s].
-‘CL_T’ - Cloud-thickness tendency [m/s].
-‘CB_T’ - Cloud-base tendency [m/s].
+'PRZT' - Rain rate at cloud top height [m/s].
 'CBH' - Cloud-base height [m].
 'TCB' - Cloud-base temperature [K].
-'TLCL' - LWSE cloud-layer average [K].
-'TLSC' - LWSE subcloud-layer average [K].
+'TLCL' - thetal cloud-layer average [K].
+'TLSC' - thetal subcloud-layer average [K].
 'QTCL' - Total water mixing ratio cloud-layer average [kg/kg].
 'QTSC' - Total water mixing ratio subcloud-layer average [kg/kg].
 'TCLT' - LWSE cloud-layer tendency [K/s].
@@ -56,7 +55,12 @@ Mass, energy, and moisture budget variables/residuals
 'QCLT' - Total water mixing ratio cloud-layer tendency [1/s].
 'QSCT' - Total water mixing ratio subcloud-layer tendency [1/s].
 ‘LWP’ - Liquid water path [kg/m2].
-
+'TADV' - Boundary-layer average thetal temperature advection [K/s].
+'QADV' - Boundary-layer average moisture advection [kg/kg/s].
+'TCLA' - Cloud-layer average thetal temperature advection [K/s].
+'QCLA' - Cloud-layer average moisture advection [kg/kg/s].
+'TSCA' - Subcloud-layer average thetal temperature advection [K/s].
+'QSCA' - Subcloud-layer average moisture advection [kg/kg/s].
 
 Vertical profiles of conditionally sampled regions (variables not included in original version of statistics.f90)
 
