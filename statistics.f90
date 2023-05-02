@@ -1317,9 +1317,8 @@ real, dimension(nx,ny,nzm) :: Dryaero
                                                           - uscw(i+1,j)*((tlsc(i+1,j) - tlsc(i,j))/dx)
                                 qtadvusc(:) = qtadvusc(:) - uscw(i,j)*((qtsc(nx,j) - qtsc(i,j))/dx) &
                                                           - uscw(i+1,j)*((qtsc(i+1,j) - qtsc(i,j))/dx)
-                              endif
 
-                              if(i.eq.nx) then !use periodic boudnary condition
+                              else if(i.eq.nx) then !use periodic boudnary condition
                                 !boundary-layer depth zonal advection
                                 tladvu(:) = tladvu(:) - u_w(i,j)*((tl_w(i,j) - tl_w(nx,j))/dx) &
                                                       - u_w(nx,j)*((tl_w(nx,j) - tl_w(i-1,j))/dx)
@@ -1335,7 +1334,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
                                                           - uscw(nx,j)*((tlsc(i,j) - tlsc(i-1,j))/dx)
                                 qtadvusc(:) = qtadvusc(:) - uscw(i,j)*((qtsc(nx,j) - qtsc(nx,j))/dx) &
                                                           - uscw(nx,j)*((qtsc(i,j) - qtsc(i-1,j))/dx)  
-                              endif
+                              else
 
                               !all other column faces not including ghost boundaries
                               tladvu(:) = tladvu(:) - u_w(i,j)*((tl_w(i,j) - tl_w(i-1,j))/dx) &
@@ -1350,6 +1349,8 @@ real, dimension(nx,ny,nzm) :: Dryaero
                                                         - uscw(i+1,j)*((tlsc(i+1,j) - tlsc(i,j))/dx)
                               qtadvusc(:) = qtadvusc(:) - uscw(i,j)*((qtsc(i,j) - qtsc(i-1,j))/dx) &
                                                         - uscw(i+1,j)*((qtsc(i+1,j) - qtsc(i,j))/dx)
+		              
+			      endif
 
                               !calculate meridional advection column-by-column (centered difference)
                               if(j.eq.1) then !use periodic boundary condition 
@@ -1368,9 +1369,8 @@ real, dimension(nx,ny,nzm) :: Dryaero
                                                           - vscw(i,j+1)*((tlsc(i,j+1) - tlsc(i,j))/dy)
                                 qtadvvsc(:) = qtadvvsc(:) - vscw(i,j)*((qtsc(i,ny) - qtsc(i,j))/dy) &
                                                           - vscw(i,j+1)*((qtsc(i,j+1) - qtsc(i,j))/dy)
-                              endif
                                
-                              if(j.eq.ny) then !use periodic boudnary condition
+                              else if(j.eq.ny) then !use periodic boudnary condition
                                 !boundary-layer depth meridional advection
                                 tladvv(:) = tladvv(:) - v_w(i,j)*((tl_w(i,j) - tl_w(i,ny))/dy) &
                                                       - v_w(i,ny)*((tl_w(i,ny) - tl_w(i,j-1))/dy)
@@ -1386,7 +1386,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
                                                           - vscw(i,ny)*((tlsc(i,j) - tlsc(i,j-1))/dy)
                                 qtadvvsc(:) = qtadvvsc(:) - vscw(i,j)*((qtsc(i,ny) - qtsc(i,ny))/dy) &
                                                           - vscw(i,ny)*((qtsc(i,j) - qtsc(i,j-1))/dy)
-                              endif
+                              else
 
                               !all other column faces not including ghost boundaries
                               tladvv(:) = tladvv(:) - v_w(i,j)*((tl_w(i,j) - tl_w(i,j-1))/dy) &
@@ -1401,6 +1401,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
                                                         - vscw(i,j+1)*((tlsc(i,j+1) - tlsc(i,j))/dy)
                               qtadvvsc(:) = qtadvvsc(:) - vscw(i,j)*((qtsc(i,j) - qtsc(i,j-1))/dy) &
                                                         - vscw(i,j+1)*((qtsc(i,j+1) - qtsc(i,j))/dy)
+		              endif
 
                               !add horizontal components of advection
                               tladvh(:) = tladvh(:) + tladvu(:) + tladvv(:)
