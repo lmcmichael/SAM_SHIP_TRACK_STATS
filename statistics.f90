@@ -1156,7 +1156,6 @@ real, dimension(nx,ny,nzm) :: Dryaero
             sse(:)=0.
  
             !mass budget/MLM budget terms
-            wem(:) = 0.
             zb(:) = 0.
             zbct(:) = 0.
             wlo(:) = 0.
@@ -1295,7 +1294,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
                         ucl(k) = ucl(k) + u(i,j,k) + ug !bloss: include ground speed
                         vcl(k) = vcl(k) + v(i,j,k) + vg                        
 
-                        if(doShipTrackConditionals) then
+                        if(doShipTrackConditionals.and.ncond.ge.7) then
                                 
                            if(k.eq.1) then
                               zb(:) = zb(:) + z(height_inv(i,j)) !inversion base height
@@ -1574,7 +1573,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
                condavg_factor(k,ncond) = condavg_factor(k,ncond)+cld(k)
                wacl(k) = wcl(k)
 
-               if(doShipTrackConditionals) then
+               if(doShipTrackConditionals.and.ncond.ge.7) then
                   wtl(k) = wtl(k)*rho(k)*cp
                   wqt(k) = wqt(k)*rho(k)*lcond
                   wtv(k) = wtv(k)*rho(k)*cp
@@ -1589,7 +1588,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
             call hbuf_put('U'//TRIM(condavgname(ncond)),ucl,1.)
             call hbuf_put('V'//TRIM(condavgname(ncond)),vcl,1.)
 
-            if(doShipTrackConditionals) then
+            if(doShipTrackConditionals.and.ncond.ge.7) then
 
                 !ship track conditionals for mixed-layer model
                 call hbuf_put('ZB'//TRIM(condavgname(ncond)),zb,1.)
