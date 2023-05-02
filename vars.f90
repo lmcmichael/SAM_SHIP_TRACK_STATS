@@ -268,10 +268,6 @@ CHARACTER(LEN=256) :: MiscRestartFilename, MiscRestartFilenameSave
 !ship track stats variables
 real :: stats_flag = 0. !switched to one if it runs smoothly
 real :: aero_col, std_aero, aero_thresh
-!old arrays used to compute tendencies
-real, dimension(nzm,10) ::  zb_old, qt_old, tl_old, &
-                            cl_old, cb_old, lwp_old, &
-                            tlcl_old, tlsc_old, qtcl_old, qtsc_old
 
 ! END UW ADDITIONS
 !===========================================================================
