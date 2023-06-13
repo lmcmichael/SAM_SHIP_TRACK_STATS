@@ -7,13 +7,9 @@ implicit none
 
 call t_startf ('pressure')
 
+! for big runs only (nx >> nzm)
 if(RUN3D) then
-! if(mod(nx_gl,nsubdomains).ne.0.or.mod(ny_gl,nsubdomains).ne.0) then
- if(mod(nx_gl,nsubdomains).ne.0) then
-  call pressure_orig
- else
   call pressure_big
- end if
 else
   call pressure_orig
 end if
