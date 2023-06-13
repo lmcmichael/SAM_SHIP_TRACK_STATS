@@ -34,7 +34,8 @@ use vars, only: pres, rho, dtn, w, t, tabs, qv, qcl, qpl, qci, qpi, &
      nstep, nstatis, nprint, icycle, total_water_prec, &
      AccumAerosolMass_snd, AccumAerosolNumber_snd, &
      nsnd,nzsnd,daysnd,zsnd,psnd
-     
+
+use domain, only: YES3D     
 use module_mp_GRAUPEL, only: GRAUPEL_INIT, M2005MICRO_GRAUPEL, polysvp
 use micro_params
 use radar_simulator_types, only: class_param
@@ -67,6 +68,7 @@ integer, parameter :: index_cloud_ice = -1 ! historical variable (don't change)
 
 real, allocatable, dimension(:,:,:) :: fluxbmk, fluxtmk !surface/top fluxes
 real, allocatable, dimension(:,:,:) :: reffc, reffi, reffs, reffr
+real, allocatable, dimension(:,:,:) :: tot_wat !total water for statistics.f90
 real, allocatable, dimension(:,:,:) :: &
      CloudLiquidMassMixingRatio, CloudLiquidGammaExponent, CloudLiquidLambda, &
      CloudIceMassMixingRatio, SnowMassMixingRatio
@@ -4084,6 +4086,22 @@ real(8) function total_water()
 
 end function total_water
 
+!real, allocatable, dimension(:,:,:) :: function tot_water()
+!real, allocatable, dimension(:,:,:) :: tot_wat
+!!calculate tot_wat for advection in statistics.f90
+!do m=1,nmicro_fields
+!   if(flag_wmass(m).eq.1) then
+!     do k=1,nzm
+!        do j=1,ny
+!           do i=1,nx
+!              tot_wat(:,:,:) = tot_wat(:,:,:) + micro_field(i,j,k,m)
+!           end do
+!        end do
+!      end do
+!    end if
+!end do
+!end function tot_water
+
 logical function micro_provides_reffc()
   micro_provides_reffc = douse_reffc
 end function micro_provides_reffc
@@ -4115,7 +4133,24 @@ function Get_nca() ! aerosol
   Get_nca = 0.
 end function Get_nca
 
-function Get_dryaerosol() !dry aerosol concentration
+function Get_qt() !mcmichael: get total water mixing ratio
+  integer i,j,k,m      
+  real, dimension(0:nx+1,1-YES3D:ny+YES3D,nzm) :: Get_qt
+  Get_qt = 0.
+  do m=1,nmicro_fields
+   if(flag_wmass(m).eq.1) then
+     do k=1,nzm
+        do j=1,ny
+           do i=1,nx
+              Get_qt(i,j,k) = Get_qt(i,j,k) + micro_field(i,j,k,m)
+           end do
+        end do
+      end do
+    end if
+  end do
+end function Get_qt
+
+function Get_dryaerosol() !mcmichael: dry aerosol concentration
   real, dimension(nx,ny,nzm) :: Get_dryaerosol
   Get_dryaerosol = micro_field(1:nx,1:ny,1:nzm,inad)
 end function Get_dryaerosol

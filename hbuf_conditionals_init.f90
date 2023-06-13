@@ -95,7 +95,7 @@ subroutine hbuf_conditionals_init(count,trcount)
      call add_to_namelist(count,trcount,'V'//TRIM(condavgname(n)), &
           'Mean V in '//TRIM(condavglongname(n)),'m/s',n)
      
-     if(doShipTrackConditionals) then
+     if(doShipTrackConditionals) then !mcmichael
      call add_to_namelist(count,trcount,'ZB'//TRIM(condavgname(n)), &
           'Inversion base height in '//TRIM(condavglongname(n)),'m',n)
      call add_to_namelist(count,trcount,'ZBCT'//TRIM(condavgname(n)), &
@@ -130,6 +130,8 @@ subroutine hbuf_conditionals_init(count,trcount)
           'Inv. Base Precip. rate in '//TRIM(condavglongname(n)),'m/s',n)
      call add_to_namelist(count,trcount,'PRZT'//TRIM(condavgname(n)), &
           'Cloud-top Precip. rate in '//TRIM(condavglongname(n)),'m/s',n)
+     call add_to_namelist(count,trcount,'PRZB'//TRIM(condavgname(n)), &
+          'Cloud-base Precip. rate in '//TRIM(condavglongname(n)),'m/s',n)
      call add_to_namelist(count,trcount,'QT_A'//TRIM(condavgname(n)), &
           'QT BL-avg. in '//TRIM(condavglongname(n)),'kg/kg',n)
      call add_to_namelist(count,trcount,'TL_A'//TRIM(condavgname(n)), &
@@ -173,19 +175,29 @@ subroutine hbuf_conditionals_init(count,trcount)
      call add_to_namelist(count,trcount,'WTV'//TRIM(condavgname(n)), &
           'Vertical buoyancy flux in '//TRIM(condavglongname(n)),'W/m2',n)
      call add_to_namelist(count,trcount,'PFS'//TRIM(condavgname(n)), &
-          'Precipitation rate in '//TRIM(condavglongname(n)),'m/s',n)
-     call add_to_namelist(count,trcount,'TADV'//TRIM(condavgname(n)), &
-          'TL advection in '//TRIM(condavglongname(n)),'K/s',n)
-     call add_to_namelist(count,trcount,'QADV'//TRIM(condavgname(n)), &
-          'QT advection in '//TRIM(condavglongname(n)),'kg/kg/s',n)
-     call add_to_namelist(count,trcount,'TCLA'//TRIM(condavgname(n)), &
-          'TL advection in cloud layer in '//TRIM(condavglongname(n)),'K/s',n)
-     call add_to_namelist(count,trcount,'QCLA'//TRIM(condavgname(n)), &
-          'QT advection in cloud layer in '//TRIM(condavglongname(n)),'kg/kg/s',n)
-     call add_to_namelist(count,trcount,'TSCA'//TRIM(condavgname(n)), &
-          'TL advection in subcloud layer in '//TRIM(condavglongname(n)),'K/s',n)
-     call add_to_namelist(count,trcount,'QSCA'//TRIM(condavgname(n)), &
-          'QT advection in subcloud layer in '//TRIM(condavglongname(n)),'kg/kg/s',n)
+          'Precipitation rate in '//TRIM(condavglongname(n)),'m/s',n) 
+     call add_to_namelist(count,trcount,'UADT'//TRIM(condavgname(n)), &
+          'Zonal TL advection in '//TRIM(condavglongname(n)),'K/s',n)
+     call add_to_namelist(count,trcount,'UADQ'//TRIM(condavgname(n)), &
+          'Zonal QT advection in '//TRIM(condavglongname(n)),'kg/kg/s',n)
+     call add_to_namelist(count,trcount,'VADT'//TRIM(condavgname(n)), &
+          'Meridional TL advection in '//TRIM(condavglongname(n)),'K/s',n)
+     call add_to_namelist(count,trcount,'VADQ'//TRIM(condavgname(n)), &
+          'Meridional QT advection in '//TRIM(condavglongname(n)),'kg/kg/s',n)
+     call add_to_namelist(count,trcount,'WADT'//TRIM(condavgname(n)), &
+          'Vertical TL advection in '//TRIM(condavglongname(n)),'K/s',n)
+     call add_to_namelist(count,trcount,'WADQ'//TRIM(condavgname(n)), &
+          'Vertical QT advection in '//TRIM(condavglongname(n)),'kg/kg/s',n)
+     call add_to_namelist(count,trcount,'TOAT'//TRIM(condavgname(n)), &
+          'Total TL advection in '//TRIM(condavglongname(n)),'K/s',n)
+     call add_to_namelist(count,trcount,'TOAQ'//TRIM(condavgname(n)), &
+          'Total QT advection in '//TRIM(condavglongname(n)),'kg/kg/s',n)
+     call add_to_namelist(count,trcount,'DIS'//TRIM(condavgname(n)), &
+          'Res. Dissip. in '//TRIM(condavglongname(n)),'m2/s3',n)
+     call add_to_namelist(count,trcount,'DIF'//TRIM(condavgname(n)), &
+          'Res. Diff. Trans. in '//TRIM(condavglongname(n)),'m2/s3',n)
+     call add_to_namelist(count,trcount,'TKER'//TRIM(condavgname(n)), &
+          'Res. TKE in '//TRIM(condavglongname(n)),'m2/s2',n)
      endif
      
      call add_to_namelist(count,trcount,'MSE'//TRIM(condavgname(n)), &

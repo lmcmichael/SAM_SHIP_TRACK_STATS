@@ -265,9 +265,13 @@ logical :: IsInitializedRestartFilename = .false.
 CHARACTER(LEN=256) :: RestartFilename, RestartFilenameSave
 CHARACTER(LEN=256) :: MiscRestartFilename, MiscRestartFilenameSave
 
-!ship track stats variables
+!ship track stats variables (mcmichael)
 real :: stats_flag = 0. !switched to one if it runs smoothly
 real :: aero_col, std_aero, aero_thresh
+
+!arrays for computing relaxation timescale (mcmichael)
+real tkediff(nx, ny, nzm) !advective transport of tke (resolved)
+real tkediss(nx, ny, nzm) !dissipation of tke (resolved)
 
 ! END UW ADDITIONS
 !===========================================================================

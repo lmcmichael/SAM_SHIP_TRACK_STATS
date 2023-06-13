@@ -221,6 +221,7 @@
             dosolarconstant, solar_constant, zenith_angle, notracegases, &
             doSAMconditionals, dosatupdnconditionals, &
             doShipTrackConditionals, &
+            doMomentumHyperviscosity, &
             nudging_t_z1, nudging_t_z2, nudging_q_z1, nudging_q_z2, &
             cem, les, ocean, land, sfc_flx_fxd, sfc_tau_fxd, &
             nrad, nxco2, latitude0, longitude0, dofplane, &
@@ -272,6 +273,7 @@
             dosolarconstant, solar_constant, zenith_angle, notracegases, &
             doSAMconditionals, dosatupdnconditionals, &
             doShipTrackConditionals, &
+            doMomentumHyperviscosity, &
             nudging_t_z1, nudging_t_z2, nudging_q_z1, nudging_q_z2, &
             cem, les, ocean, land, sfc_flx_fxd, sfc_tau_fxd, &
             nrad, nxco2, latitude0, longitude0, dofplane, &

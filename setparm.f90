@@ -42,6 +42,7 @@ NAMELIST /PARAMETERS/ dodamping, doupperbound, docloud, doprecip, &
                 dotracers, output_sep, perturb_type, &
                 doSAMconditionals, dosatupdnconditionals, &
                 doShipTrackConditionals, & !added option for ship track stats
+                doMomentumHyperviscosity, & !added hyperviscosity option
                 doscamiopdata, iopfile, dozero_out_day0, &
                 use_scam_reference_sounding, set_obs_to_reference_sounding, &
                 use_scam_reference_sounding_for_wtg, use_scam_initial_sounding, & !bloss(2018-11-30/2019-02-22)
@@ -231,7 +232,7 @@ end if
         !aerosol threshold conditional stats (SH_CLOUD, SH_CLEAR, NO_SH_CLEAR,
         !NO_SH_CLOUD)
         if(doShipTrackConditionals) ncondavg = ncondavg + 4 
-	if(ncondavg.gt.10) then
+        if(ncondavg.gt.10) then
              print*, 'ERROR: Need to allocate more memory in vars.f90 (zb_old)'
         endif
         if(allocated(condavg_factor)) then ! avoid double allocation when nrestart=2

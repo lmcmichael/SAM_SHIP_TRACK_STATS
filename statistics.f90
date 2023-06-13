@@ -6,7 +6,7 @@ use grid, only: doShipTrackConditionals, day, nstat, nstep, nstatfrq
 use micro_params, only: shipv2_time0
 use rad, only: qrad, do_output_clearsky_heating_profiles, radqrclw, radqrcsw, &
                swUp3D, swDown3D, lwUp3D, lwDown3D
-use microphysics, only: Get_dryaerosol 
+use microphysics, only: Get_dryaerosol, Get_qt 
 use tracers
 use params
 use hbuffer
@@ -98,7 +98,7 @@ implicit none
  real tvcla(nzm)!kzm added Apr. 7,2004 for thetav anomalies
  real wstar3(nzm) !bloss added 11/04/05 
 
- !----------SHIP TRACK CONDITIONALS-------------
+ !----------------------SHIP TRACK CONDITIONALS (mcmichael) -----------------------
  !radiation streams sampled conditionally
  real, dimension(nzm) :: sw_u, sw_d, lw_u, lw_d
 
@@ -137,7 +137,6 @@ implicit none
  real, dimension(nx,ny) :: tlcl, qtcl, tlsc, qtsc, uclw, vclw, uscw, vscw !cl, subcloud layer averages
  real, dimension(nx,ny) :: qt_w, tl_w, u_w, v_w !weighted BL column means
  real, dimension(nzm) :: z_grid, z_diff !correcting z grid
- real, dimension(nzm) :: wem !entrainment rate from mass budget
  real, dimension(nzm) :: zb, tcb, zbct !inversion base height
  real, dimension(nzm) :: wlo, wloct !local vertical velocity
  real, dimension(nzm) :: wla, wlact !large-scale subsidence
@@ -145,18 +144,27 @@ implicit none
                          swutct, swdtct, lwutct, lwdtct !rad terms
  real, dimension(nzm) :: rdiv, ldiv, sdiv, rdivct, sdivct, ldivct !radiative divergence terms
  real, dimension(nzm) :: sh_f, lh_f !surface flux terms 
- real, dimension(nzm) :: pr_s, pr_z, pr_zct !surface and inversion top prec. flux
+ real, dimension(nzm) :: pr_s, pr_z, pr_zct, pr_zb !surface, inversion top, cb prec. flux
  real, dimension(nzm) :: cb_h_avg, cl_d_avg, lwp_avg, &
                          tlcl_avg, tlsc_avg, qtcl_avg, qtsc_avg, &
                          tl_avg, qt_avg
+ 
  !horizontal advection related variables
- real, dimension(nzm) :: tladvu, qtadvu, tladvucl, qtadvucl, tladvusc, qtadvusc, &
-                         tladvv, qtadvv, tladvvcl, qtadvvcl, tladvvsc, qtadvvsc, &
-                         tladvh, qtadvh, tladvclh, qtadvclh, tladvsch, qtadvsch
+ real, dimension(nzm) :: u_adv_t, u_adv_q, v_adv_t, v_adv_q, w_adv_t, w_adv_q, &
+                         tot_tadv, tot_qadv
  real, parameter :: der_thresh = 0.03 !derivative threshold for dT/dz
  integer, parameter :: h_cb = 40 !starting index for k loop (~cloud-base)
  real :: der_temp, rho_tot, rho_tot2, rho_tot3
- !------------------------------------------------
+ 
+ !relaxation timescale variables
+ real, dimension(nzm) :: difftke, disstke, restke
+
+ !dry aerosol concentration (#/cm3) passed from microphysics.f90
+ real, dimension(nx,ny,nzm) :: Dryaero
+
+ !total water passed from microphysics.f90 with buffer points
+ real, dimension(0:nx+1,1-YES3D:ny+YES3D,nzm) :: tot_w
+ !-------------------------------------------------------------------------------
 
  !bloss: momentum flux statistics for cloud, up/downdraft cores
  real, dimension(nzm) :: uwsbcl, vwsbcl, uwlecl, vwlecl, &
@@ -181,9 +189,6 @@ real, dimension(nzm) :: rhowcl, rhowmsecl, rhowtlcl, rhowqtcl,  &
 
 real :: relhobs(nzm)
 
-!dry aerosol concentration (#/cm3) passed from microphysics.f90
-real, dimension(nx,ny,nzm) :: Dryaero
-
 ! END UW ADDITIONS
 !========================================================================
 
@@ -204,6 +209,14 @@ real, dimension(nx,ny,nzm) :: Dryaero
 
      call boundaries(4)
 
+!---------------------------------------------------------
+!mcmichael: Update boundaries for scalar quantities for 
+!advection calculations
+
+     call boundaries(2)
+
+     !grab total water from microphysics.f90
+     tot_w(0:nx+1,1-YES3D:ny+YES3D,:) = Get_qt()
 !-----------------------------------------------
 !	Mean thermodynamics profiles:
 !-----------------------------------------------	
@@ -758,7 +771,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
          !   this is used in MICRO_M2005 to compute conditional averages of 
          !     microphysical transfer rates
          
-         !added conditional statistics for ship track stats 
+!mcmichael: added conditional statistics for ship track stats 
          !conditions are non-cloudy ship track, non-cloudy no ship,
          !cloudy ship track, and cloudy no ship
          !Ship track is defined as the weighted average of the bottom
@@ -767,7 +780,6 @@ real, dimension(nx,ny,nzm) :: Dryaero
          !in a grid column. Background aerosol standard deviation is the 
          !maximum of either the standard deviation in vertical columns 
          !or the standard deviation in the horizontal.
-         !mcmichael (7/2022)
          !----------------------------------------------------------------
          if(doShipTrackConditionals) then
 
@@ -882,7 +894,8 @@ real, dimension(nx,ny,nzm) :: Dryaero
            endif
          endif
          !-----------------------------------------------------------------
-         !calculate column-by-column mass budget and mixed-layer budget terms 
+         if(doShipTrackConditionals) then
+         !mcmichael: calculate column-by-column mixed-layer budget terms 
          !calculating inversion base height for col-by-col mass budget
 
          !shifting tabs grid
@@ -911,20 +924,21 @@ real, dimension(nx,ny,nzm) :: Dryaero
                               if (der_temp.gt.der_thresh) then
                                  height_inv(i,j) = k
                                  if (der_temp.gt.der_thresh) exit kloop
+                              else
+                                 !for cases where no inv. base was found
+                                 height_inv(i,j) = 2 
                               endif
                        enddo kloop
                        der_temp = 0.
                 enddo jloop
          enddo iloop
-
+         
          !------------------------------------------------------------------
-         !calculate column-by-column weighted qt and tl for tendency comp.
-         !weighted by grid spacing and density
+         !mcmichael: calculate column-by-column weighted qt and tl for tendency comp.
+         !weighted by vertical grid spacing and density
 
          qt_w(:,:) = 0.
          tl_w(:,:) = 0.
-         u_w(:,:) = 0. !for zonal advection calculation
-         v_w(:,:) = 0. !for meridional advection calculation
          do i = 1,nx
                 do j = 1,ny
                        do k = 1,height_inv(i,j)
@@ -935,17 +949,11 @@ real, dimension(nx,ny,nzm) :: Dryaero
                        qt_w(i,j) = qt_w(i,j) + (qv(i,j,k)+qcl(i,j,k)+qci(i,j,k)) &
                                    *(((z_diff(k)/z(height_inv(i,j))) + &
                                    (rho(k)/rho_tot))/2.0)
-                       u_w(i,j) = u_w(i,j) + (u(i,j,k) + ug) &
-                                   *(((z_diff(k)/z(height_inv(i,j))) + &
-                                   (rho(k)/rho_tot))/2.0)
-                       v_w(i,j) = v_w(i,j) + (v(i,j,k) + vg) &
-                                   *(((z_diff(k)/z(height_inv(i,j))) + &
-                                   (rho(k)/rho_tot))/2.0)
                        enddo
                 enddo
          enddo         
          !------------------------------------------------------------------
-         !calculate the cloud base and cloud top height
+         !mcmichael: calculate the cloud base and cloud top height
          der_temp = 0.
          iloop1: do i = 1,nx
                 jloop1: do j = 1,ny
@@ -954,6 +962,10 @@ real, dimension(nx,ny,nzm) :: Dryaero
                               if (der_temp.gt.0.) then
                                  height_cb(i,j) = k
                                  if (der_temp.gt.0.) exit kloop1
+                              else
+                                 !non-cloudy columns set to 1
+                                 !to avoid blowups in following section
+                                 height_cb(i,j) = 1
                               endif
                        enddo kloop1
                        der_temp = 0.
@@ -968,65 +980,60 @@ real, dimension(nx,ny,nzm) :: Dryaero
                               if (der_temp.gt.0.) then
                                  height_ct(i,j) = k
                                  if (der_temp.gt.0.) exit kloop2
+                              else
+                                 !non-cloudy columns set to 2
+                                 !to avoid blowups in following section
+                                 height_ct(i,j) = 2 
                               endif
                        enddo kloop2
                        der_temp = 0.
                 enddo jloop2
          enddo iloop2
 
-         !calculate liquid water path in each column
+         !mcmichael: calculate liquid water path in each column
          !calculate cloud-layer average of q_t and t_l in cloudy regions
          lwp(:,:) = 0.
          tlcl(:,:) = 0.
          qtcl(:,:) = 0.
-         uclw(:,:) = 0. !weighted zonal wind for advection
-         vclw(:,:) = 0. !weighted meridional wind for advection
          do i = 1,nx
                 do j = 1,ny
-                       do k = height_cb(i,j),height_ct(i,j)
-                          rho_tot2 = SUM(rho(height_cb(i,j):height_ct(i,j)))
-                          lwp(i,j) = lwp(i,j) + rho(k)*qcl(i,j,k)*z_diff(k)
-                          tlcl(i,j) = tlcl(i,j) + t(i,j,k) &
-                                      *((z_diff(k)/(z(height_ct(i,j))-z(height_cb(i,j))) + &
-                                      (rho(k)/rho_tot2))/2.0)
-                          qtcl(i,j) = qtcl(i,j) + (qv(i,j,k)+qcl(i,j,k)+qci(i,j,k)) &
-                                      *((z_diff(k)/(z(height_ct(i,j))-z(height_cb(i,j))) + &
-                                      (rho(k)/rho_tot2))/2.0)
-                          uclw(i,j) = uclw(i,j) + (u(i,j,k) + ug) &
-                                      *((z_diff(k)/(z(height_ct(i,j))-z(height_cb(i,j))) + &
-                                      (rho(k)/rho_tot2))/2.0)
-                          vclw(i,j) = vclw(i,j) + (v(i,j,k) + vg) &
-                                      *((z_diff(k)/(z(height_ct(i,j))-z(height_cb(i,j))) + &
-                                      (rho(k)/rho_tot2))/2.0)
-                       enddo
+                       !make sure cloud top is higher than cloud base (i.e. - not one grid
+                       !box of cloud)
+                       if (height_ct(i,j).gt.h_cb.and.height_ct(i,j).gt.height_cb(i,j)) then
+                          do k = height_cb(i,j),height_ct(i,j)
+                             rho_tot2 = SUM(rho(height_cb(i,j):height_ct(i,j)))
+                             lwp(i,j) = lwp(i,j) + rho(k)*qcl(i,j,k)*z_diff(k)
+                             tlcl(i,j) = tlcl(i,j) + t(i,j,k) &
+                                         *((z_diff(k)/(z(height_ct(i,j))-z(height_cb(i,j))) + &
+                                         (rho(k)/rho_tot2))/2.0)
+                             qtcl(i,j) = qtcl(i,j) + (qv(i,j,k)+qcl(i,j,k)+qci(i,j,k)) &
+                                         *((z_diff(k)/(z(height_ct(i,j))-z(height_cb(i,j))) + &
+                                         (rho(k)/rho_tot2))/2.0)
+                          enddo
+                       endif
                 enddo
          enddo         
 
-         !calculate subcloud layer average of q_t and t_l in cloudy regions
+         !mcmichael: calculate subcloud layer average of q_t and t_l in cloudy regions
          tlsc(:,:) = 0.
          qtsc(:,:) = 0.
-         uscw(:,:) = 0. !weighted zonal wind for advection
-         vscw(:,:) = 0. !weighted meridional wind for advection
          do i = 1,nx
                 do j = 1,ny
-                        do k = 1,height_cb(i,j)
-                           rho_tot3 = SUM(rho(1:height_cb(i,j)))
-                           tlsc(i,j) = tlsc(i,j) + t(i,j,k) &
-                                      *((z_diff(k)/(z(height_cb(i,j))) + &
-                                      (rho(k)/rho_tot3))/2.0)
-                           qtsc(i,j) = qtsc(i,j) + (qv(i,j,k)+qcl(i,j,k)+qci(i,j,k)) &
-                                      *((z_diff(k)/(z(height_cb(i,j))) + &
-                                      (rho(k)/rho_tot3))/2.0)
-                           uscw(i,j) = uscw(i,j) + (u(i,j,k) + ug) &
-                                      *((z_diff(k)/(z(height_cb(i,j))) + &
-                                      (rho(k)/rho_tot3))/2.0)
-                           vscw(i,j) = vscw(i,j) + (v(i,j,k) + vg) &
-                                      *((z_diff(k)/(z(height_cb(i,j))) + &
-                                      (rho(k)/rho_tot3))/2.0)
-                        enddo
+                       if (height_cb(i,j).gt.1) then
+                          do k = 1,height_cb(i,j)
+                             rho_tot3 = SUM(rho(1:height_cb(i,j)))
+                             tlsc(i,j) = tlsc(i,j) + t(i,j,k) &
+                                         *((z_diff(k)/(z(height_cb(i,j))) + &
+                                         (rho(k)/rho_tot3))/2.0)
+                             qtsc(i,j) = qtsc(i,j) + (qv(i,j,k)+qcl(i,j,k)+qci(i,j,k)) &
+                                         *((z_diff(k)/(z(height_cb(i,j))) + &
+                                         (rho(k)/rho_tot3))/2.0)
+                          enddo
+                       endif
                 enddo
          enddo
 
+         end if
          !------------------------------------------------------------------
 
          condavg_mask(:,:,:,:) = 0.
@@ -1081,8 +1088,9 @@ real, dimension(nx,ny,nzm) :: Dryaero
                      condavg_mask(i,j,k,icondavg_env) = 1. ! cloud-free environment
                   end if
                   
-		  !only loop through i,j indices for ship track stats
-		  if(k.eq.1) then
+		  !mcmichael: only loop through i,j indices for ship track stats
+                  if(doShipTrackConditionals) then
+                     if(k.eq.1) then
 		  
                   	!conditional averages for ship track 
                   	!computed for mixed-layer model profiles
@@ -1126,7 +1134,8 @@ real, dimension(nx,ny,nzm) :: Dryaero
                      		condavg_mask(i,j,:,icondavg_no_sh_clear) = 1. !no ship, no cloud
                   	end if
 			
-		  end if
+		    end if
+                  end if
 
                end do
             end do
@@ -1155,7 +1164,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
             mse(:)=0.
             sse(:)=0.
  
-            !mass budget/MLM budget terms
+            !mcmichael: mass budget/MLM budget terms
             zb(:) = 0.
             zbct(:) = 0.
             wlo(:) = 0.
@@ -1185,6 +1194,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
             pr_s(:) = 0.
             pr_z(:) = 0.
             pr_zct(:) = 0.
+            pr_zb(:) = 0.
             tl_avg(:) = 0.
             tlcl_avg(:) = 0.
             qtcl_avg(:) = 0.
@@ -1196,46 +1206,41 @@ real, dimension(nx,ny,nzm) :: Dryaero
             cl_d_avg(:) = 0.
             lwp_avg(:) = 0.
 
-            !advection-related variables
-            tladvu(:) = 0.
-            qtadvu(:) = 0.
-            tladvv(:) = 0.
-            qtadvv(:) = 0.
-            tladvucl(:) = 0.
-            qtadvucl(:) = 0.
-            tladvvcl(:) = 0.
-            qtadvvcl(:) = 0.
-            tladvusc(:) = 0.
-            qtadvusc(:) = 0.
-            tladvvsc(:) = 0.
-            qtadvvsc(:) = 0.
-            tladvh(:) = 0.
-            qtadvh(:) = 0.
-            tladvclh(:) = 0.
-            qtadvclh(:) = 0.
-            tladvsch(:) = 0.
-            qtadvsch(:) = 0.
+            !mcmichael: advection-related variables
+            u_adv_t(:) = 0.
+            u_adv_q(:) = 0.
+            v_adv_t(:) = 0.
+            v_adv_q(:) = 0.
+            w_adv_t(:) = 0.
+            w_adv_q(:) = 0.
+            tot_tadv(:) = 0.
+            tot_qadv(:) = 0.
 
-            !radiation streams sampled conditionally
+            !mcmichael: radiation streams sampled conditionally
             sw_u(:) = 0.
             sw_d(:) = 0.
             lw_u(:) = 0.
             lw_d(:) = 0.
 
-            !variances for ship track stats
+            !mcmichael: variances for ship track stats
             ts2(:) = 0.
             qs2(:) = 0.
             ws2(:) = 0.
             us2(:) = 0.
             vs2(:) = 0.
 
-            !vertical turbulent fluxes for ship tracks
+            !mcmichael: vertical turbulent fluxes for ship tracks
             wtl(:) = 0.
             wqt(:) = 0.
             wtv(:) = 0.
 
-            !precipitation flux for ship tracks
+            !mcmichael: precipitation flux for ship tracks
             pfs(:) = 0.
+
+            !mcmichael: relaxation timescale variables
+            disstke(:) = 0.
+            difftke(:) = 0.
+            restke(:) = 0.
 
             !bloss: conditional u,v anomalies
             ucla(:) = 0. 
@@ -1294,123 +1299,13 @@ real, dimension(nx,ny,nzm) :: Dryaero
                         ucl(k) = ucl(k) + u(i,j,k) + ug !bloss: include ground speed
                         vcl(k) = vcl(k) + v(i,j,k) + vg                        
 
-                        if(doShipTrackConditionals.and.ncond.ge.7) then
+                        if(doShipTrackConditionals.and.ncond.ge.7) then !mcmichael 
                                 
                            if(k.eq.1) then
+                              !cloud top (ct) statistics are only valid for
+                              !cloudy conditionals ST1, ST3
                               zb(:) = zb(:) + z(height_inv(i,j)) !inversion base height
-                              zbct(:) = zbct(:) + z(height_ct(i,j)) !cloud-top height
-
-                              !calculate zonal advection column-by-column (centered difference)
-                              if(i.eq.1) then !use periodic boundary condition 
-                                !boundary-layer depth zonal advection
-                                tladvu(:) = tladvu(:) - u_w(i,j)*((tl_w(nx,j) - tl_w(i,j))/dx) &
-                                                      - u_w(i+1,j)*((tl_w(i+1,j) - tl_w(i,j))/dx)
-                                qtadvu(:) = qtadvu(:) - u_w(i,j)*((qt_w(nx,j) - qt_w(i,j))/dx) &
-                                                      - u_w(i+1,j)*((qt_w(i+1,j) - qt_w(i,j))/dx)
-                                !cloud-layer zonal advection
-                                tladvucl(:) = tladvucl(:) - uclw(i,j)*((tlcl(nx,j) - tlcl(i,j))/dx) &
-                                                          - uclw(i+1,j)*((tlcl(i+1,j) - tlcl(i,j))/dx)
-                                qtadvucl(:) = qtadvucl(:) - uclw(i,j)*((qtcl(nx,j) - qtcl(i,j))/dx) &
-                                                          - uclw(i+1,j)*((qtcl(i+1,j) - qtcl(i,j))/dx)
-                                !subcloud-layer zonal advection
-                                tladvusc(:) = tladvusc(:) - uscw(i,j)*((tlsc(nx,j) - tlsc(i,j))/dx) &
-                                                          - uscw(i+1,j)*((tlsc(i+1,j) - tlsc(i,j))/dx)
-                                qtadvusc(:) = qtadvusc(:) - uscw(i,j)*((qtsc(nx,j) - qtsc(i,j))/dx) &
-                                                          - uscw(i+1,j)*((qtsc(i+1,j) - qtsc(i,j))/dx)
-
-                              else if(i.eq.nx) then !use periodic boudnary condition
-                                !boundary-layer depth zonal advection
-                                tladvu(:) = tladvu(:) - u_w(i,j)*((tl_w(i,j) - tl_w(nx,j))/dx) &
-                                                      - u_w(nx,j)*((tl_w(nx,j) - tl_w(i-1,j))/dx)
-                                qtadvu(:) = qtadvu(:) - u_w(i,j)*((qt_w(i,j) - qt_w(nx,j))/dx) &
-                                                      - u_w(nx,j)*((qt_w(nx,j) - qt_w(i-1,j))/dx)
-                                !cloud-layer zonal advection
-                                tladvucl(:) = tladvucl(:) - uclw(i,j)*((tlcl(nx,j) - tlcl(nx,j))/dx) &
-                                                          - uclw(nx,j)*((tlcl(i,j) - tlcl(i-1,j))/dx)
-                                qtadvucl(:) = qtadvucl(:) - uclw(i,j)*((qtcl(nx,j) - qtcl(nx,j))/dx) &
-                                                          - uclw(nx,j)*((qtcl(i,j) - qtcl(i-1,j))/dx)
-                                !subcloud-layer zonal advection
-                                tladvusc(:) = tladvusc(:) - uscw(i,j)*((tlsc(nx,j) - tlsc(nx,j))/dx) &
-                                                          - uscw(nx,j)*((tlsc(i,j) - tlsc(i-1,j))/dx)
-                                qtadvusc(:) = qtadvusc(:) - uscw(i,j)*((qtsc(nx,j) - qtsc(nx,j))/dx) &
-                                                          - uscw(nx,j)*((qtsc(i,j) - qtsc(i-1,j))/dx)  
-                              else
-
-                              !all other column faces not including ghost boundaries
-                              tladvu(:) = tladvu(:) - u_w(i,j)*((tl_w(i,j) - tl_w(i-1,j))/dx) &
-                                                    - u_w(i+1,j)*((tl_w(i+1,j) - tl_w(i,j))/dx)
-                              qtadvu(:) = qtadvu(:) - u_w(i,j)*((qt_w(i,j) - qt_w(i-1,j))/dx) &
-                                                    - u_w(i+1,j)*((qt_w(i+1,j) - qt_w(i,j))/dx)
-                              tladvucl(:) = tladvucl(:) - uclw(i,j)*((tlcl(i,j) - tlcl(i-1,j))/dx) &
-                                                        - uclw(i+1,j)*((tlcl(i+1,j) - tlcl(i,j))/dx)
-                              qtadvucl(:) = qtadvucl(:) - uclw(i,j)*((qtcl(i,j) - qtcl(i-1,j))/dx) &
-                                                        - uclw(i+1,j)*((qtcl(i+1,j) - qtcl(i,j))/dx)
-                              tladvusc(:) = tladvusc(:) - uscw(i,j)*((tlsc(i,j) - tlsc(i-1,j))/dx) &
-                                                        - uscw(i+1,j)*((tlsc(i+1,j) - tlsc(i,j))/dx)
-                              qtadvusc(:) = qtadvusc(:) - uscw(i,j)*((qtsc(i,j) - qtsc(i-1,j))/dx) &
-                                                        - uscw(i+1,j)*((qtsc(i+1,j) - qtsc(i,j))/dx)
-		              
-			      endif
-
-                              !calculate meridional advection column-by-column (centered difference)
-                              if(j.eq.1) then !use periodic boundary condition 
-                                !boundary-layer depth meridional advection
-                                tladvv(:) = tladvv(:) - v_w(i,j)*((tl_w(i,ny) - tl_w(i,j))/dy) &
-                                                      - v_w(i,j+1)*((tl_w(i,j+1) - tl_w(i,j))/dy)
-                                qtadvv(:) = qtadvv(:) - v_w(i,j)*((qt_w(i,ny) - qt_w(i,j))/dy) &
-                                                      - v_w(i,j+1)*((qt_w(i,j+1) - qt_w(i,j))/dy)
-                                !cloud-layer meridional advection
-                                tladvvcl(:) = tladvvcl(:) - vclw(i,j)*((tlcl(i,ny) - tlcl(i,j))/dy) &
-                                                          - vclw(i,j+1)*((tlcl(i,j+1) - tlcl(i,j))/dy)
-                                qtadvvcl(:) = qtadvvcl(:) - vclw(i,j)*((qtcl(i,ny) - qtcl(i,j))/dy) &
-                                                          - vclw(i,j+1)*((qtcl(i,j+1) - qtcl(i,j))/dy)
-                                !subcloud-layer meridional advection
-                                tladvvsc(:) = tladvvsc(:) - vscw(i,j)*((tlsc(i,ny) - tlsc(i,j))/dy) &
-                                                          - vscw(i,j+1)*((tlsc(i,j+1) - tlsc(i,j))/dy)
-                                qtadvvsc(:) = qtadvvsc(:) - vscw(i,j)*((qtsc(i,ny) - qtsc(i,j))/dy) &
-                                                          - vscw(i,j+1)*((qtsc(i,j+1) - qtsc(i,j))/dy)
-                               
-                              else if(j.eq.ny) then !use periodic boudnary condition
-                                !boundary-layer depth meridional advection
-                                tladvv(:) = tladvv(:) - v_w(i,j)*((tl_w(i,j) - tl_w(i,ny))/dy) &
-                                                      - v_w(i,ny)*((tl_w(i,ny) - tl_w(i,j-1))/dy)
-                                qtadvv(:) = qtadvv(:) - v_w(i,j)*((qt_w(i,j) - qt_w(i,ny))/dy) &
-                                                      - v_w(i,ny)*((qt_w(i,ny) - qt_w(i,j-1))/dy)
-                                !cloud-layer zonal advection
-                                tladvvcl(:) = tladvvcl(:) - vclw(i,j)*((tlcl(i,ny) - tlcl(i,ny))/dy) &
-                                                          - vclw(i,ny)*((tlcl(i,j) - tlcl(i,j-1))/dy)
-                                qtadvvcl(:) = qtadvvcl(:) - vclw(i,j)*((qtcl(i,ny) - qtcl(i,ny))/dy) &
-                                                          - vclw(i,ny)*((qtcl(i,j) - qtcl(i,j-1))/dy)
-                                !subcloud-layer zonal advection
-                                tladvvsc(:) = tladvvsc(:) - vscw(i,j)*((tlsc(i,ny) - tlsc(i,ny))/dy) &
-                                                          - vscw(i,ny)*((tlsc(i,j) - tlsc(i,j-1))/dy)
-                                qtadvvsc(:) = qtadvvsc(:) - vscw(i,j)*((qtsc(i,ny) - qtsc(i,ny))/dy) &
-                                                          - vscw(i,ny)*((qtsc(i,j) - qtsc(i,j-1))/dy)
-                              else
-
-                              !all other column faces not including ghost boundaries
-                              tladvv(:) = tladvv(:) - v_w(i,j)*((tl_w(i,j) - tl_w(i,j-1))/dy) &
-                                                    - v_w(i,j+1)*((tl_w(i,j+1) - tl_w(i,j))/dy)
-                              qtadvv(:) = qtadvv(:) - v_w(i,j)*((qt_w(i,j) - qt_w(i,j-1))/dy) &
-                                                    - v_w(i,j+1)*((qt_w(i,j+1) - qt_w(i,j))/dy)
-                              tladvvcl(:) = tladvvcl(:) - vclw(i,j)*((tlcl(i,j) - tlcl(i,j-1))/dy) &
-                                                        - vclw(i,j+1)*((tlcl(i,j+1) - tlcl(i,j))/dy)
-                              qtadvvcl(:) = qtadvvcl(:) - vclw(i,j)*((qtcl(i,j) - qtcl(i,j-1))/dy) &
-                                                        - vclw(i,j+1)*((qtcl(i,j+1) - qtcl(i,j))/dy)
-                              tladvvsc(:) = tladvvsc(:) - vscw(i,j)*((tlsc(i,j) - tlsc(i,j-1))/dy) &
-                                                        - vscw(i,j+1)*((tlsc(i,j+1) - tlsc(i,j))/dy)
-                              qtadvvsc(:) = qtadvvsc(:) - vscw(i,j)*((qtsc(i,j) - qtsc(i,j-1))/dy) &
-                                                        - vscw(i,j+1)*((qtsc(i,j+1) - qtsc(i,j))/dy)
-		              endif
-
-                              !add horizontal components of advection
-                              tladvh(:) = tladvh(:) + tladvu(:) + tladvv(:)
-                              qtadvh(:) = qtadvh(:) + qtadvu(:) + qtadvv(:)
-                              tladvclh(:) = tladvclh(:) + tladvucl(:) + tladvvcl(:)
-                              qtadvclh(:) = qtadvclh(:) + qtadvucl(:) + qtadvvcl(:)
-                              tladvsch(:) = tladvsch(:) + tladvusc(:) + tladvvsc(:)
-                              qtadvsch(:) = qtadvsch(:) + qtadvusc(:) + qtadvvsc(:)
-                                                
+                              zbct(:) = zbct(:) + z(height_ct(i,j)) !cloud-top height                  
                               wlo(:) = wlo(:) + w(i,j,height_inv(i,j)) !regional w
                               wla(:) = wla(:) + wsub(height_inv(i,j)) !large-scale w
                               wloct(:) = wloct(:) + w(i,j,height_ct(i,j)) !regional w
@@ -1442,9 +1337,12 @@ real, dimension(nx,ny,nzm) :: Dryaero
                               pr_z(:) = pr_z(:) + 0.5*(w(i,j,height_inv(i,j)+1) &
                                         +w(i,j,height_inv(i,j)))*(qpl(i,j,height_inv(i,j)) &
                                         -qrz(height_inv(i,j))) !inv. top prec. flux
-                              pr_zct(:) = pr_z(:) + 0.5*(w(i,j,height_ct(i,j)+1) &
+                              pr_zct(:) = pr_zct(:) + 0.5*(w(i,j,height_ct(i,j)+1) &
                                           +w(i,j,height_ct(i,j)))*(qpl(i,j,height_ct(i,j)) &
                                           -qrz(height_ct(i,j))) !inv. top prec. flux
+                              pr_zb(:) = pr_zb(:) + 0.5*(w(i,j,height_cb(i,j)+1) &
+                                          +w(i,j,height_cb(i,j)))*(qpl(i,j,height_cb(i,j)) &
+                                          -qrz(height_cb(i,j))) !cloud base prec. flux
                               tl_avg(:) = tl_avg(:) + tl_w(i,j) !weighted tl average
                               tcb(:) = tcb(:) + tabs(i,j,height_cb(i,j)) !cb temp
                               qt_avg(:) = qt_avg(:) + qt_w(i,j) !weighted qt average
@@ -1469,12 +1367,33 @@ real, dimension(nx,ny,nzm) :: Dryaero
                            vs2(k) = us2(k) + (v(i,j,k) - v0(k))**2 !v variance
 
                            pfs(k) = pfs(k)+tmp(1)*(qpl(i,j,k)-qrz(k)) !liquid precipitation flux
-
-                           kb = MAX(1, k-1)     
+     
                            wtl(k) = wtl(k) + 0.5*w(i,j,k)*(t(i,j,kb)-t0(kb)+t(i,j,k)-t0(k)) !TL flux   
                            wqt(k) = wqt(k) + 0.5*w(i,j,k)*(qv(i,j,kb)+qcl(i,j,kb)+qci(i,j,kb)-q0(kb)+ &
                                     qv(i,j,k)+qcl(i,j,k)+qci(i,j,k)-q0(k)) !QT flux
                            wtv(k) = wtv(k) + 0.5*w(i,j,k)*(tvirt(i,j,kb)-tvz(kb)+tvirt(i,j,k)-tvz(k)) !TV flux
+
+                           !compute full advection profile
+                           u_adv_t(k) = u_adv_t(k) - u(i,j,k)*((t(i,j,k) - t(i-1,j,k))/dx) &
+                                                   - u(i+1,j,k)*((t(i+1,j,k) - t(i,j,k))/dx)
+                           v_adv_t(k) = v_adv_t(k) - v(i,j,k)*((t(i,j,k) - t(i,j-1,k))/dy) &
+                                                   - v(i,j+1,k)*((t(i,j+1,k) - t(i,j,k))/dy)
+                           u_adv_q(k) = u_adv_q(k) - u(i,j,k)*((tot_w(i,j,k) - tot_w(i-1,j,k))/dx) &
+                                                   - u(i+1,j,k)*((tot_w(i+1,j,k) - tot_w(i,j,k))/dx)                
+                           v_adv_q(k) = v_adv_q(k) - v(i,j,k)*((tot_w(i,j,k) - tot_w(i,j-1,k))/dy) &
+                                                   - v(i,j+1,k)*((tot_w(i,j+1,k) - tot_w(i,j,k))/dy)
+                           w_adv_t(k) = w_adv_t(k) - w(i,j,k)*((t(i,j,k) - t(i,j,kb))/z_diff(k)) &
+                                                   - w(i,j,kc)*((t(i,j,kc) - t(i,j,k))/z_diff(k))
+                           w_adv_q(k) = w_adv_q(k) - w(i,j,k)*((tot_w(i,j,k) - tot_w(i,j,kb))/z_diff(k)) &
+                                                   - w(i,j,kc)*((tot_w(i,j,kc) - tot_w(i,j,k))/z_diff(k))
+                           tot_tadv(k) = tot_tadv(k) + u_adv_t(k) + v_adv_t(k) + w_adv_t(k)
+                           tot_qadv(k) = tot_qadv(k) + u_adv_q(k) + v_adv_q(k) + w_adv_q(k)
+
+                           !relaxation timescale variables
+                           disstke(k) = disstke(k) + tkediss(i,j,k)
+                           difftke(k) = difftke(k) + tkediff(i,j,k)
+                           restke(k) = restke(k) + 0.5*(((u(i,j,k) - u0(k))**2) + ((v(i,j,k) - v0(k))**2) &
+                                       + 0.5*(w(i,j,k+1)**2+w(i,j,k)**2))
 
                         endif
  
@@ -1491,7 +1410,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
                         qpcl(k) = qpcl(k) + qpl(i,j,k) + qpi(i,j,k)
                         tvcl(k) = tvcl(k) + tvirt(i,j,k)	 
                         tvcla(k) = tvcla(k) + tvirt(i,j,k) - tvz(k)	 
-                        tacl(k) = tacl(k) + tabs(i,j,k)	 
+                        tacl(k) = tacl(k) + tabs(i,j,k)
                         twcl(k) = twcl(k) + t(i,j,k)*0.5*(w(i,j,k+1)+w(i,j,k))
                         qwcl(k) = qwcl(k) + (qv(i,j,k)+qcl(i,j,k)+qci(i,j,k))*0.5*(w(i,j,k+1)+w(i,j,k))
                         tvwcl(k) = tvwcl(k)+tvirt(i,j,k)*0.5*(w(i,j,k+1)+w(i,j,k))
@@ -1609,6 +1528,7 @@ real, dimension(nx,ny,nzm) :: Dryaero
                 call hbuf_put('PR_S'//TRIM(condavgname(ncond)),pr_s,1.)
                 call hbuf_put('PR_Z'//TRIM(condavgname(ncond)),pr_z,1.)
                 call hbuf_put('PRZT'//TRIM(condavgname(ncond)),pr_zct,1.)
+                call hbuf_put('PRZB'//TRIM(condavgname(ncond)),pr_zb,1.)
                 call hbuf_put('QT_A'//TRIM(condavgname(ncond)),qt_avg,1.)
                 call hbuf_put('TL_A'//TRIM(condavgname(ncond)),tl_avg,1.)
                 call hbuf_put('LWP'//TRIM(condavgname(ncond)),lwp_avg,1.)
@@ -1631,12 +1551,17 @@ real, dimension(nx,ny,nzm) :: Dryaero
                 call hbuf_put('WQT'//TRIM(condavgname(ncond)),wqt,1.)
                 call hbuf_put('WTV'//TRIM(condavgname(ncond)),wtv,1.) 
                 call hbuf_put('PFS'//TRIM(condavgname(ncond)),pfs,1.)
-                call hbuf_put('TADV'//TRIM(condavgname(ncond)),tladvh,1.)
-                call hbuf_put('QADV'//TRIM(condavgname(ncond)),qtadvh,1.)
-                call hbuf_put('TCLA'//TRIM(condavgname(ncond)),tladvclh,1.)
-                call hbuf_put('QCLA'//TRIM(condavgname(ncond)),qtadvclh,1.)
-                call hbuf_put('TSCA'//TRIM(condavgname(ncond)),tladvsch,1.)
-                call hbuf_put('QSCA'//TRIM(condavgname(ncond)),qtadvsch,1.)
+                call hbuf_put('UADT'//TRIM(condavgname(ncond)),u_adv_t,1.)
+                call hbuf_put('UADQ'//TRIM(condavgname(ncond)),u_adv_q,1.)
+                call hbuf_put('VADT'//TRIM(condavgname(ncond)),v_adv_t,1.)
+                call hbuf_put('VADQ'//TRIM(condavgname(ncond)),v_adv_q,1.)
+                call hbuf_put('WADT'//TRIM(condavgname(ncond)),w_adv_t,1.)
+                call hbuf_put('WADQ'//TRIM(condavgname(ncond)),w_adv_q,1.)
+                call hbuf_put('TOAT'//TRIM(condavgname(ncond)),tot_tadv,1.)
+                call hbuf_put('TOAQ'//TRIM(condavgname(ncond)),tot_qadv,1.)
+                call hbuf_put('DIS'//TRIM(condavgname(ncond)),disstke,1.)
+                call hbuf_put('DIF'//TRIM(condavgname(ncond)),difftke,1.)
+                call hbuf_put('TKER'//TRIM(condavgname(ncond)),restke,1.)
                 !---------------------------------------------
                  
             endif
