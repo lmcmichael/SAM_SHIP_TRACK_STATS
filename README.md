@@ -1,7 +1,7 @@
 # SAM_SHIP_TRACK_STATS
 Source code to compute conditional stats in the ship track region as a function of the background aerosol threshold determined immediately before the aerosol injection begins. Code altered from version 6.10.9. 
 
-All Affected files: Included in this directory. 
+All Affected files: Included in this directory. This directory also includes modified pressure solver routines for bowling alley domains, which allows the maximum number of subdomains to be equal to the maximum number of grid cells in the long dimension. Additionally, for very large domains (200 km x 25 km), we opted for 100 m grid spacing, which compared to a 50 m run, was entraining too much. We employed hyperviscosity (extra diffusion) to the momentum field to achieve consistent results between the 100 and 50 m runs.   
 
 Overview: Conditionally sample statistics based on deviations from background aerosol concentration before an aerosol injection. A ship track column is present if the weighted average of the bottom N height levels (N controlled by n_avg_lev, with a default value of the bottom 30 grid levels) exceeds the standard deviation threshold (default value: std_t = 3.0). The standard deviation (std_aero) is the maximum deviation in either the horizontal or vertical directions. At each time step, each model grid column is assigned one of the 4 conditions based on the average aerosol concentration through n_avg_lev and the presence/absence of liquid water (threshold is anything greater than 0 g/kg) in the column. Current version will only work with RAD_RRTM4PBL and MICRO_M2005_PA, but this can be easily ported to other radiation/microphysics packages. 
 
@@ -64,6 +64,11 @@ Vertical profiles of conditionally sampled regions (variables not included in or
 ‘WQT’ - Vertical total water mixing ratio flux.
 ‘WTV’ - Vertical buoyancy flux.
 ‘PFS’ - Vertical flux of precipitation.
+
+Variables to compute relaxation time scale:
+
 'DIS' - Resolved dissipation rate [m2/s3].
 'DIF' - Resolved diffusive transport [m2/s3].
 'TKER' - Resolved TKE [m2/s2].
+
+Final Mixed-Layer Model Budget Code included in .pro files (IDL)
