@@ -33,13 +33,13 @@ Mass, energy, and moisture budget variables/residuals
 ‘PR_S’ - Surface rain rate [m/s].
 ‘PR_Z’ - Rain rate (precipitation flux) at the inversion base [m/s].
 'PRZT' - Rain rate at cloud top height [m/s].
-'CBH' - Cloud-base height [m].
+'CBH' - Cloud-base height [m]. (ST1 and ST3)
 'TCB' - Cloud-base temperature [K].
-'TLCL' - thetal cloud-layer average [K].
+'TLCL' - thetal cloud-layer average [K]. (ST1 and ST3)
 'TLSC' - thetal subcloud-layer average [K].
-'QTCL' - Total water mixing ratio cloud-layer average [kg/kg].
+'QTCL' - Total water mixing ratio cloud-layer average [kg/kg]. (ST1 and ST3)
 'QTSC' - Total water mixing ratio subcloud-layer average [kg/kg].
-‘LWP’ - Liquid water path [kg/m2].
+‘LWP’ - Liquid water path [kg/m2]. (ST1 and ST3)
 'UADT' - Zonal thetal advection profile [K/s].
 'UADQ' - Zonal total water advection profile [kg/kg/s].
 'VADT' - Meridional thetal advection profile [K/s].
