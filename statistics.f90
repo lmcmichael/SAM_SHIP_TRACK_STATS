@@ -1364,7 +1364,7 @@ real :: relhobs(nzm)
                            qs2(k) = qs2(k) + (qv(i,j,k)+qcl(i,j,k)+qci(i,j,k)-q0(k))**2 !qt variance
                            ws2(k) = ws2(k) + 0.5*(w(i,j,k+1)**2+w(i,j,k)**2) !w variance 
                            us2(k) = us2(k) + (u(i,j,k) - u0(k))**2 !u variance
-                           vs2(k) = us2(k) + (v(i,j,k) - v0(k))**2 !v variance
+                           vs2(k) = vs2(k) + (v(i,j,k) - v0(k))**2 !v variance
 
                            pfs(k) = pfs(k)+tmp(1)*(qpl(i,j,k)-qrz(k)) !liquid precipitation flux
      
