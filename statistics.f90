@@ -1374,18 +1374,19 @@ real :: relhobs(nzm)
                            wtv(k) = wtv(k) + 0.5*w(i,j,k)*(tvirt(i,j,kb)-tvz(kb)+tvirt(i,j,k)-tvz(k)) !TV flux
 
                            !compute full advection profile
-                           u_adv_t(k) = u_adv_t(k) - u(i,j,k)*((t(i,j,k) - t(i-1,j,k))/dx) &
-                                                   - u(i+1,j,k)*((t(i+1,j,k) - t(i,j,k))/dx)
-                           v_adv_t(k) = v_adv_t(k) - v(i,j,k)*((t(i,j,k) - t(i,j-1,k))/dy) &
-                                                   - v(i,j+1,k)*((t(i,j+1,k) - t(i,j,k))/dy)
-                           u_adv_q(k) = u_adv_q(k) - u(i,j,k)*((tot_w(i,j,k) - tot_w(i-1,j,k))/dx) &
-                                                   - u(i+1,j,k)*((tot_w(i+1,j,k) - tot_w(i,j,k))/dx)                
-                           v_adv_q(k) = v_adv_q(k) - v(i,j,k)*((tot_w(i,j,k) - tot_w(i,j-1,k))/dy) &
-                                                   - v(i,j+1,k)*((tot_w(i,j+1,k) - tot_w(i,j,k))/dy)
-                           w_adv_t(k) = w_adv_t(k) - w(i,j,k)*((t(i,j,k) - t(i,j,kb))/z_diff(k)) &
-                                                   - w(i,j,kc)*((t(i,j,kc) - t(i,j,k))/z_diff(k))
-                           w_adv_q(k) = w_adv_q(k) - w(i,j,k)*((tot_w(i,j,k) - tot_w(i,j,kb))/z_diff(k)) &
-                                                   - w(i,j,kc)*((tot_w(i,j,kc) - tot_w(i,j,k))/z_diff(k))
+                           u_adv_t(k) = u_adv_t(k) + ( u(i,j,k)*(0.5*(t(i,j,k) + t(i-1,j,k))) &
+                                                     - u(i+1,j,k)*(0.5*(t(i+1,j,k) + t(i,j,k))))/dx
+                           v_adv_t(k) = v_adv_t(k) + ( v(i,j,k)*(0.5*(t(i,j,k) + t(i,j-1,k))) &
+                                                     - v(i,j+1,k)*(0.5*(t(i,j+1,k) + t(i,j,k))))/dy
+                           u_adv_q(k) = u_adv_q(k) + ( u(i,j,k)*(0.5*(tot_w(i,j,k) + tot_w(i-1,j,k))) &
+                                                     - u(i+1,j,k)*(0.5*(tot_w(i+1,j,k) + tot_w(i,j,k))))/dx
+                           v_adv_q(k) = v_adv_q(k) + ( v(i,j,k)*(0.5*(tot_w(i,j,k) + tot_w(i,j-1,k))) &
+                                                     - v(i,j+1,k)*(0.5*(tot_w(i,j+1,k) + tot_w(i,j,k))))/dy
+                           w_adv_t(k) = w_adv_t(k) + ( rhow(k)*w(i,j,k)*(0.5*(t(i,j,k) + t(i,j,kb)) + ggr*zi(k)/cp) &
+                                                     - rhow(kc)*w(i,j,kc)*(0.5*(t(i,j,kc) + t(i,j,k)) + ggr*zi(kc)/cp))/(rho(k)*z_diff(k))
+                           w_adv_q(k) = w_adv_q(k) + ( rhow(k)*w(i,j,k)*(0.5*(tot_w(i,j,k) + tot_w(i,j,kb))) &
+                                                     - rhow(kc)*w(i,j,kc)*(0.5*(tot_w(i,j,kc) + tot_w(i,j,k))))/(rho(k)*z_diff(k))
+						   
                            tot_tadv(k) = tot_tadv(k) + u_adv_t(k) + v_adv_t(k) + w_adv_t(k)
                            tot_qadv(k) = tot_qadv(k) + u_adv_q(k) + v_adv_q(k) + w_adv_q(k)
 
