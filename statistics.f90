@@ -1382,8 +1382,8 @@ real :: relhobs(nzm)
                                                      - u(i+1,j,k)*(0.5*(tot_w(i+1,j,k) + tot_w(i,j,k))))/dx
                            v_adv_q(k) = v_adv_q(k) + ( v(i,j,k)*(0.5*(tot_w(i,j,k) + tot_w(i,j-1,k))) &
                                                      - v(i,j+1,k)*(0.5*(tot_w(i,j+1,k) + tot_w(i,j,k))))/dy
-                           w_adv_t(k) = w_adv_t(k) + ( rhow(k)*w(i,j,k)*(0.5*(t(i,j,k) + t(i,j,kb)) + ggr*zi(k)/cp) &
-                                                     - rhow(kc)*w(i,j,kc)*(0.5*(t(i,j,kc) + t(i,j,k)) + ggr*zi(kc)/cp))/(rho(k)*z_diff(k))
+                           w_adv_t(k) = w_adv_t(k) + ( rhow(k)*w(i,j,k)*(0.5*(t(i,j,k) + t(i,j,kb))) &
+                                                     - rhow(kc)*w(i,j,kc)*(0.5*(t(i,j,kc) + t(i,j,k))))/(rho(k)*z_diff(k))
                            w_adv_q(k) = w_adv_q(k) + ( rhow(k)*w(i,j,k)*(0.5*(tot_w(i,j,k) + tot_w(i,j,kb))) &
                                                      - rhow(kc)*w(i,j,kc)*(0.5*(tot_w(i,j,kc) + tot_w(i,j,k))))/(rho(k)*z_diff(k))
 						   
