@@ -150,8 +150,7 @@ implicit none
                          tl_avg, qt_avg
  
  !horizontal advection related variables
- real, dimension(nzm) :: u_adv_t, u_adv_q, v_adv_t, v_adv_q, w_adv_t, w_adv_q, &
-                         tot_tadv, tot_qadv
+ real, dimension(nzm) :: u_adv_t, u_adv_q, v_adv_t, v_adv_q, w_adv_t, w_adv_q
  real, parameter :: der_thresh = 0.03 !derivative threshold for dT/dz
  integer, parameter :: h_cb = 40 !starting index for k loop (~cloud-base)
  real :: der_temp, rho_tot, rho_tot2, rho_tot3
@@ -1213,8 +1212,6 @@ real :: relhobs(nzm)
             v_adv_q(:) = 0.
             w_adv_t(:) = 0.
             w_adv_q(:) = 0.
-            tot_tadv(:) = 0.
-            tot_qadv(:) = 0.
 
             !mcmichael: radiation streams sampled conditionally
             sw_u(:) = 0.
@@ -1387,8 +1384,6 @@ real :: relhobs(nzm)
                            w_adv_q(k) = w_adv_q(k) + ( rhow(k)*w(i,j,k)*(0.5*(tot_w(i,j,k) + tot_w(i,j,kb))) &
                                                      - rhow(kc)*w(i,j,kc)*(0.5*(tot_w(i,j,kc) + tot_w(i,j,k))))/(rho(k)*z_diff(k))
 						   
-                           tot_tadv(k) = tot_tadv(k) + u_adv_t(k) + v_adv_t(k) + w_adv_t(k)
-                           tot_qadv(k) = tot_qadv(k) + u_adv_q(k) + v_adv_q(k) + w_adv_q(k)
 
                            !relaxation timescale variables
                            disstke(k) = disstke(k) + tkediss(i,j,k)
