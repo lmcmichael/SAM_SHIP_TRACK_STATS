@@ -48,8 +48,6 @@ Mass, energy, and moisture budget variables/residuals
 'VADQ' - Meridional total water advection profile [kg/kg/s].
 'WADT' - Vertical thetal advection profile [K/s].
 'WADQ' - Vertical total water advection profile [kg/kg/s].
-'TOAT' - Total thetal advection profile [K/s]
-'TOAQ' - Total total water advection profile [kg/kg/s].
 
 Vertical profiles of conditionally sampled regions (variables not included in original version of statistics.f90)
 
