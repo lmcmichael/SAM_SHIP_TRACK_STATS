@@ -1,7 +1,7 @@
 # SAM_SHIP_TRACK_STATS
 Source code to compute conditional stats in the ship track region as a function of the background aerosol threshold determined immediately before the aerosol injection begins. Code altered from version 6.10.9. 
 
-Additional modifications: Code included to calculate hyperdiffusion for 100 m grid spacing, large-domain runs. Code included to calculate a passive ship-flux tracer. 
+Additional modifications: Code included to calculate hyperdiffusion for 100 m grid spacing, large-domain runs. Switch to do hyperdiffusion is in params.f90: doMomentumHyperviscosity = .true. and  tau_MomentumHyperviscosity controls the timescale of turbulence damping. 
 
 All Affected files: Included in this directory. This directory also includes modified pressure solver routines for bowling alley domains, which allows the maximum number of subdomains to be equal to the maximum number of grid cells in the long dimension. Additionally, for very large domains (200 km x 25 km), we opted for 100 m grid spacing, which compared to a 50 m run, was entraining too much. We employed hyperviscosity (extra diffusion) to the momentum field to achieve consistent results between the 100 and 50 m runs.   
 
