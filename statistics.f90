@@ -152,7 +152,7 @@ implicit none
  !horizontal advection related variables
  real, dimension(nzm) :: u_adv_t, u_adv_q, v_adv_t, v_adv_q, w_adv_t, w_adv_q
  real, parameter :: der_thresh = 0.03 !derivative threshold for dT/dz
- integer, parameter :: h_cb = 40 !starting index for k loop (~cloud-base)
+ integer, parameter :: h_cb = 10 !starting index for k loop (~cloud-base)
  real :: der_temp, rho_tot, rho_tot2, rho_tot3
  
  !relaxation timescale variables
@@ -998,7 +998,7 @@ real :: relhobs(nzm)
                 do j = 1,ny
                        !make sure cloud top is higher than cloud base (i.e. - not one grid
                        !box of cloud)
-                       if (height_ct(i,j).gt.h_cb.and.height_ct(i,j).gt.height_cb(i,j)) then
+                       if (height_ct(i,j).gt.height_cb(i,j)) then
                           do k = height_cb(i,j),height_ct(i,j)
                              rho_tot2 = SUM(rho(height_cb(i,j):height_ct(i,j)))
                              lwp(i,j) = lwp(i,j) + rho(k)*qcl(i,j,k)*z_diff(k)
