@@ -1,3 +1,5 @@
+Source code for UW-SAM is compressed in UWSAM.tar.gz. This includes all code necessary to re-run the ship track simulations.
+
 # SAM_SHIP_TRACK_STATS
 Source code to compute conditional stats in the ship track region as a function of the background aerosol threshold determined immediately before the aerosol injection begins. Code altered from version 6.10.9. 
 
