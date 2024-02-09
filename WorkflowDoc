@@ -1,0 +1,5 @@
+This file contains the general workflow from initial LES simulation to plotting
+
+1. Begin with large domain LES simulations with prognostic aerosol scheme (UWSAM.tar.gz), with additional capabilities for calculating momentum hyperdiffusion when using 100 m grid spacing to align better with 50 m simulations and the ability to conditionally sample the ship track region for 'in-plume' input parameters (all necessary subroutines included in this directory and they are compatible with the compressed version of UW-SAM).
+
+2. Calculate the boundary-layer averaged aerosol concentration with Aerosol_3D.pro. The 2-D outputs from this routine will be fed into  
