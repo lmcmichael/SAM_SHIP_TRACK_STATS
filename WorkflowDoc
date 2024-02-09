@@ -4,4 +4,4 @@ This file contains the general workflow from initial LES simulation to plotting
 
 2. Calculate the boundary-layer averaged aerosol concentration with Aerosol_3D.pro in ParticleModel directory. The 2-D outputs from this routine will be fed into LES_Width.m to fit Guassian curves to the LES data and estimate plume width. Ship_shear.pro is used to create the LES input parameter forcing files from conditionally-sampled LES statistics. Plot_crossections.pro is used to plot x-y figures of 3-D LES output.
 
-3. 
+3. Once LES input parameter forcing files and LES-estimated ship track widths are available, C_0 parameter fitting is done using particlemodel_LSE.m. Once C_0 has been determined, these constants for the different conditional average categories are applied to the different cases in particlemodel_(case).m. Plot_widths.m plots various particle model plume widths and errors with LES-estimated widths. 
