@@ -188,10 +188,6 @@ subroutine hbuf_conditionals_init(count,trcount)
           'Vertical TL advection in '//TRIM(condavglongname(n)),'K/s',n)
      call add_to_namelist(count,trcount,'WADQ'//TRIM(condavgname(n)), &
           'Vertical QT advection in '//TRIM(condavglongname(n)),'kg/kg/s',n)
-     call add_to_namelist(count,trcount,'TOAT'//TRIM(condavgname(n)), &
-          'Total TL advection in '//TRIM(condavglongname(n)),'K/s',n)
-     call add_to_namelist(count,trcount,'TOAQ'//TRIM(condavgname(n)), &
-          'Total QT advection in '//TRIM(condavglongname(n)),'kg/kg/s',n)
      call add_to_namelist(count,trcount,'DIS'//TRIM(condavgname(n)), &
           'Res. Dissip. in '//TRIM(condavglongname(n)),'m2/s3',n)
      call add_to_namelist(count,trcount,'DIF'//TRIM(condavgname(n)), &
